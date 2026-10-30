@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: all_cars.php?updated=1");
         exit;
     } else {
-        echo "Error: " . $stmt->error;
+        echo cr_db_error($stmt->error);
     }
 }
 ?>

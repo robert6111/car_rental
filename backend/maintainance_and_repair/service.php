@@ -35,7 +35,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $_SESSION['success'] = "Service record added successfully!";
     } else {
         // Set error message in session
-        $_SESSION['error'] = "Error: " . $stmt->error;
+        error_log('Service insert failed: ' . $stmt->error); $_SESSION['error'] = "The service record could not be saved.";
     }
 
     // Redirect to the same page to prevent form resubmission on refresh
@@ -79,13 +79,13 @@ include __DIR__ . '/../includes/leftsidebar.php';
     <?php
 if (isset($_SESSION['success'])) {
     echo "<div style='text-align:center; padding:10px; color:green; font-weight:bold;'>"
-         . $_SESSION['success'] . "</div>";
+         . h($_SESSION['success']) . "</div>";
     unset($_SESSION['success']);
 }
 
 if (isset($_SESSION['error'])) {
     echo "<div style='text-align:center; padding:10px; color:red; font-weight:bold;'>"
-         . $_SESSION['error'] . "</div>";
+         . h($_SESSION['error']) . "</div>";
     unset($_SESSION['error']);
 }
 ?>
@@ -100,8 +100,8 @@ if (isset($_SESSION['error'])) {
         <option value="">-- Select Car --</option>
 
         <?php while ($car = $allCars->fetch_assoc()) : ?>
-            <option value="<?= $car['car_id'] ?>">
-                <?= $car['make_name'] . ' ' . $car['model_name'] . ' (' . $car['reg_no'] . ')' ?>
+            <option value="<?= (int)$car['car_id'] ?>">
+                <?= h($car['make_name'] . ' ' . $car['model_name'] . ' (' . $car['reg_no'] . ')') ?>
             </option>
         <?php endwhile; ?>
 

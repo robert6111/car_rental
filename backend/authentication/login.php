@@ -1,65 +1,64 @@
 <?php
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-error_reporting(0);
-
 require __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/app.php';
 
+// Fresh installation with no active admin yet: go to the first-run setup screen.
+if (!cr_active_admin_exists($conn)) {
+    header('Location: setup.php');
+    exit;
+}
+if (stock_is_logged_in()) {
+    header('Location: ' . app_url('dashboard.php'));
+    exit;
+}
+
 $login_error = '';
-
-if (isset($_GET['timeout'])) {
-    $login_error = 'Your session expired due to inactivity. Please login again.';
-}
-
-$loginLockedUntil = (int)($_SESSION['login_lock_until'] ?? 0);
-if ($loginLockedUntil > 0 && time() >= $loginLockedUntil) {
-    unset($_SESSION['login_attempts'], $_SESSION['login_lock_until']);
-    $loginLockedUntil = 0;
-}
+$login_notice = '';
+if (isset($_GET['timeout'])) $login_notice = 'Your session expired due to inactivity. Please login again.';
+if (isset($_GET['signed_out'])) $login_notice = 'You have been signed out because your account was changed. Please login again.';
+if (isset($_GET['setup_done'])) $login_notice = 'Admin account created. You can now login.';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
-    if ($loginLockedUntil > time()) {
-        $remainingMinutes = max(1, (int)ceil(($loginLockedUntil - time()) / 60));
-        $login_error = 'Too many failed login attempts. Please try again in ' . $remainingMinutes . ' minute(s).';
+    $email = strtolower(trim((string)($_POST['email'] ?? '')));
+    $password = (string)($_POST['password'] ?? '');
+    $window = CAR_RENTAL_LOGIN_LOCK_SECONDS;
+    $ipBucket = cr_rate_bucket('login_ip');
+    $accountBucket = cr_rate_bucket('login_acct|' . $email, false);
+
+    // Lock per account (stops password guessing on one user) and per IP (stops spraying many users).
+    if (cr_rate_count($accountBucket, $window) >= CAR_RENTAL_LOGIN_MAX_ATTEMPTS || cr_rate_count($ipBucket, $window) >= CAR_RENTAL_LOGIN_MAX_ATTEMPTS * 4) {
+        $login_error = 'Too many failed login attempts. Please try again in ' . (int)ceil($window / 60) . ' minutes.';
     } else {
-        $email = trim($_POST['email'] ?? '');
-        $password = (string)($_POST['password'] ?? '');
-
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $password === '') {
-            $login_error = 'Invalid email or password.';
-        } else {
-            $stmt = $conn->prepare("SELECT id, username, password, role_id, is_active FROM users WHERE email = ? LIMIT 1");
-            if ($stmt) {
-                $stmt->bind_param("s", $email);
-                $stmt->execute();
-                $stmt->store_result();
-
-                if ($stmt->num_rows > 0) {
-                    $stmt->bind_result($id, $username, $hash, $role_id, $is_active);
-                    $stmt->fetch();
-
-                    if ((int)$is_active === 1 && password_verify($password, $hash)) {
-                        session_regenerate_id(true);
-                        $_SESSION['user_id'] = $id;
-                        $_SESSION['username'] = $username;
-                        $_SESSION['role_id'] = $role_id;
-                        $_SESSION['LAST_ACTIVITY'] = time();
-                        unset($_SESSION['login_attempts'], $_SESSION['login_lock_until']);
-                        header('Location: ' . app_url('dashboard.php'));
-                        exit;
-                    }
-                }
-                $stmt->close();
-            }
-
-            $login_error = 'Invalid email or password.';
-            $_SESSION['login_attempts'] = (int)($_SESSION['login_attempts'] ?? 0) + 1;
-            if ($_SESSION['login_attempts'] >= CAR_RENTAL_LOGIN_MAX_ATTEMPTS) {
-                $_SESSION['login_lock_until'] = time() + CAR_RENTAL_LOGIN_LOCK_SECONDS;
-                $login_error = 'Too many failed login attempts. Please try again in 15 minutes.';
-            }
+        $user = null;
+        if (filter_var($email, FILTER_VALIDATE_EMAIL) && $password !== '') {
+            $stmt = $conn->prepare('SELECT id, username, password, role_id, is_active, session_version FROM users WHERE email = ? LIMIT 1');
+            $stmt->bind_param('s', $email);
+            $stmt->execute();
+            $user = $stmt->get_result()->fetch_assoc() ?: null;
+            $stmt->close();
         }
+
+        // Always run password_verify so response time does not reveal whether the email exists.
+        $hash = $user['password'] ?? '$2y$10$DUALGfg/EelgjK0Lk54a9.WgPjyXLO9Cifsn.KITyK8KZV/dnSi3i';
+        $passwordOk = password_verify($password, $hash);
+
+        if ($user && $passwordOk && (int)$user['is_active'] === 1) {
+            if (password_needs_rehash($user['password'], PASSWORD_DEFAULT)) {
+                $newHash = password_hash($password, PASSWORD_DEFAULT);
+                $up = $conn->prepare('UPDATE users SET password = ? WHERE id = ?');
+                $up->bind_param('si', $newHash, $user['id']);
+                $up->execute();
+                $up->close();
+            }
+            cr_rate_clear($accountBucket);
+            stock_login_user($user);
+            header('Location: ' . app_url('dashboard.php'));
+            exit;
+        }
+
+        cr_rate_record($accountBucket);
+        cr_rate_record($ipBucket);
+        $login_error = 'Invalid email or password.';
     }
 }
 ?>
@@ -81,6 +80,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                 <div class="title">LOGIN</div>
 
                 <div class="msg">
+                    <?php if ($login_notice): ?>
+                        <p class="alert success"><?= h($login_notice); ?></p>
+                    <?php endif; ?>
                     <?php if ($login_error): ?>
                         <p class="alert error"><?= h($login_error); ?></p>
                     <?php endif; ?>
@@ -97,9 +99,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                 </div>
 
                 <div class="action centered-flex">
-                    <label for="remember" class="centered-flex">
-                        <input type="checkbox" id="remember"> Remember me
-                    </label>
                     <a href="forgot_password.php">Forgot Password?</a>
                 </div>
 

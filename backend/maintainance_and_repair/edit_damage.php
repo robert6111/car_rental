@@ -44,7 +44,7 @@ $_POST['id']
 if ($stmt->execute()) {
 $_SESSION['success'] = "Damage updated successfully!";
 } else {
-$_SESSION['error'] = "Error: " . $stmt->error;
+error_log('Damage update failed: ' . $stmt->error); $_SESSION['error'] = "The damage record could not be saved.";
 }
 
 
@@ -78,15 +78,15 @@ $damage = $result->fetch_assoc();
 <?php include __DIR__ . '/../includes/leftsidebar.php'; ?>
 
 <div class="content-page">
-<h2>Edit Damage (ID: <?= $damage['id'] ?>)</h2>
+<h2>Edit Damage (ID: <?= (int)$damage['id'] ?>)</h2>
 
 
 <form method="POST">
-<input type="hidden" name="id" value="<?= $damage['id'] ?>">
+<input type="hidden" name="id" value="<?= (int)$damage['id'] ?>">
 
 
 <label>Description:</label><br>
-<textarea name="damage_description" rows="4" cols="50"><?= $damage['damage_description'] ?></textarea><br><br>
+<textarea name="damage_description" rows="4" cols="50"><?= h($damage['damage_description']) ?></textarea><br><br>
 
 
 <label>Severity:</label>
@@ -98,7 +98,7 @@ $damage = $result->fetch_assoc();
 
 
 <label>Estimated Cost:</label><br>
-<input type="number" step="0.01" name="estimated_cost" value="<?= $damage['estimated_cost'] ?>"><br><br>
+<input type="number" step="0.01" name="estimated_cost" value="<?= h($damage['estimated_cost']) ?>"><br><br>
 
 
 <label>Repaired?</label>
@@ -109,7 +109,7 @@ $damage = $result->fetch_assoc();
 
 
 <label>Repair Cost:</label><br>
-<input type="number" step="0.01" name="repair_cost" value="<?= $damage['repair_cost'] ?>"><br><br>
+<input type="number" step="0.01" name="repair_cost" value="<?= h($damage['repair_cost']) ?>"><br><br>
 
 
 <label>Repair Date:</label><br>
@@ -123,7 +123,7 @@ $damage = $result->fetch_assoc();
 </form> 
 
 
-<a href="view_damage.php?id=<?= $damage['id'] ?>">View</a>
+<a href="view_damage.php?id=<?= (int)$damage['id'] ?>">View</a>
 <br>
 <a href="list_damage.php">Back</a>
 

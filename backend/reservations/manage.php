@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_reservation'])) 
             header('Location: manage.php?msg=' . urlencode($status === 'Waitlisted' ? 'Reservation saved in waitlist because the car has a date conflict.' : 'Reservation confirmed successfully.'));
             exit;
         }
-        $error = 'Could not save reservation: ' . $stmt->error;
+        $error = cr_db_error($stmt->error);
         $stmt->close();
     }
 }

@@ -44,6 +44,7 @@ CREATE TABLE users (
   role_id INT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   is_active TINYINT(1) DEFAULT 1,
+  session_version INT NOT NULL DEFAULT 0,
   reset_token VARCHAR(255) NULL,
   reset_expires DATETIME NULL,
   PRIMARY KEY (id),
@@ -180,7 +181,7 @@ CREATE TABLE car_service (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO roles (id, name) VALUES (1, 'Admin'), (2, 'Staff'), (3, 'Manager'), (4, 'Cashier'), (5, 'Maintenance');
-INSERT INTO users (username, email, password, role_id, is_active) VALUES ('setup', 'setup@carrental.local', '$2y$12$/MecU0j1aO3.cKygFyvxduZGiUTyEHwif2NWbNn9KbiEDl4Z7OmxK', 1, 1);
+-- No default user: on first visit the system opens a setup screen to create the admin account.
 
 INSERT INTO makes (id, name) VALUES (1,'Toyota'),(2,'Nissan'),(3,'Honda'),(4,'Hyundai');
 INSERT INTO models (make_id, name) VALUES (1,'Corolla'),(1,'RAV4'),(2,'X-Trail'),(3,'Civic'),(4,'Tucson');
@@ -250,6 +251,8 @@ CREATE TABLE documents (
   document_type VARCHAR(80) NOT NULL,
   title VARCHAR(255) NOT NULL,
   file_path VARCHAR(500) NULL,
+  original_name VARCHAR(255) NULL,
+  mime_type VARCHAR(100) NULL,
   expiry_date DATE NULL,
   notes TEXT NULL,
   uploaded_by INT NULL,
@@ -344,4 +347,11 @@ CREATE TABLE expenses (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   KEY idx_expense_date (expense_date),
   KEY idx_expense_car (car_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE rate_limits (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  bucket VARCHAR(190) NOT NULL,
+  created_at DATETIME NOT NULL,
+  KEY idx_rate_bucket (bucket, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

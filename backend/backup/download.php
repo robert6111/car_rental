@@ -8,7 +8,7 @@ if (!stock_rate_limit('backup_download_' . (int)($_SESSION['user_id'] ?? 0), 10,
     exit;
 }
 $file = basename($_GET['file'] ?? '');
-$path = __DIR__ . '/backups/' . $file;
+$path = cr_storage_path('backups') . '/' . $file;
 
 if ($file === '' || !preg_match('/^[A-Za-z0-9._-]+\.sql$/', $file) || !is_file($path)) {
     http_response_code(404);

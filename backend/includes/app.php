@@ -21,7 +21,21 @@ function app_url(string $path = ''): string {
 }
 
 function h($value): string {
-    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+    return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+/** True when at least one active Admin account exists (false on a fresh installation). */
+function cr_active_admin_exists(mysqli $conn): bool {
+    $res = $conn->query("SELECT 1 FROM users WHERE role_id = 1 AND is_active = 1 LIMIT 1");
+    return $res && $res->num_rows > 0;
+}
+
+/** Logs a database error and returns a message that is safe to show to users. */
+function cr_db_error(string $dbError, string $fallback = 'The record could not be saved. Please try again.'): string {
+    error_log('Database error: ' . $dbError);
+    if (stripos($dbError, 'Duplicate entry') !== false) return 'This record already exists (a value that must be unique is already used).';
+    if (stripos($dbError, 'foreign key') !== false) return 'This record is linked to other records, so this change is not allowed.';
+    return $fallback;
 }
 
 function is_admin_user(): bool {

@@ -23,7 +23,7 @@ if (isset($_GET['action'], $_GET['car_id']) && $_GET['action'] === 'del') {
     if ($stmt->execute()) {
         $msg = "Car marked as maintenance/unavailable.";
     } else {
-        $error = "Error updating car: " . $stmt->error;
+        $error = cr_db_error($stmt->error);
     }
     $stmt->close();
 }
@@ -41,7 +41,7 @@ $sql = "SELECT c.id, c.reg_no, c.availability_status,
 
 $result = $conn->query($sql);
 if (!$result) {
-    die("Query failed: " . $conn->error);
+    { error_log('Query failed: ' . $conn->error); http_response_code(500); exit('Something went wrong. Please try again.'); }
 }
 ?>
 

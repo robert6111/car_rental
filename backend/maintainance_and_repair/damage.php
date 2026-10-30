@@ -14,7 +14,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $sql = "INSERT INTO car_damages (car_id, rental_id, damage_description, severity, estimated_cost, date_reported) VALUES (?, ?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("iissds", $car_id, $rental_id, $_POST['damage_description'], $_POST['severity'], $estimated_cost, $_POST['date_reported']);
-    if ($stmt->execute()) $_SESSION['success'] = "Damage report saved and linked to the customer rental."; else $_SESSION['error'] = "Error: " . $stmt->error;
+    if ($stmt->execute()) $_SESSION['success'] = "Damage report saved and linked to the customer rental."; else { error_log('Damage insert failed: ' . $stmt->error); $_SESSION['error'] = "The damage report could not be saved."; }
     $stmt->close(); header("Location: damage.php"); exit;
 }
 

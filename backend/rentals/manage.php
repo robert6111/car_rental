@@ -53,7 +53,7 @@ $sql = "SELECT r.id, r.start_date, r.end_date, r.total_cost, r.status AS rental_
         GROUP BY r.id, r.start_date, r.end_date, r.total_cost, r.status, c.full_name, ca.reg_no, m.name, mo.name, y.year
         ORDER BY r.id DESC";
 $result = $conn->query($sql);
-if (!$result) die('Query failed: ' . $conn->error);
+if (!$result) { error_log('Query failed: ' . $conn->error); http_response_code(500); exit('Something went wrong. Please try again.'); }
 ?>
 <head>
     <title>Manage Rentals</title>

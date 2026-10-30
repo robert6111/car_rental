@@ -1,56 +1,45 @@
 <?php
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-error_reporting(0);
-
 require __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/app.php';
 require_once __DIR__ . '/../includes/send_email.php';
 
 $error = '';
 $success = '';
-$resetLink = '';
+$emailReady = cr_mail_configured() && cr_absolute_url('', true) !== null;
 
-function buildResetLink(string $token): string {
-    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    return $scheme . '://' . $host . app_url('authentication/reset_password.php') . '?token=' . urlencode($token);
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!stock_rate_limit('forgot_password', 5, 3600)) {
-        $error = 'Too many password reset requests. Please try again later.';
-    } else {
-    $email = trim($_POST['email'] ?? '');
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $emailReady) {
+    $email = strtolower(trim((string)($_POST['email'] ?? '')));
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = 'Please enter a valid email address.';
+    } elseif (!stock_rate_limit('forgot_password', 5, 3600)) {
+        $error = 'Too many password reset requests. Please try again later.';
     } else {
-        $success = 'If the email exists and is active, a password reset link has been prepared.';
-        $stmt = $conn->prepare('SELECT id, is_active FROM users WHERE email = ? LIMIT 1');
+        // Same message whether or not the account exists, so emails cannot be discovered.
+        $success = 'If an active account uses this email, a reset link has been sent. It expires in 1 hour.';
+
+        $stmt = $conn->prepare('SELECT id, username FROM users WHERE email = ? AND is_active = 1 LIMIT 1');
         $stmt->bind_param('s', $email);
         $stmt->execute();
-        $result = $stmt->get_result();
-        $user = $result ? $result->fetch_assoc() : null;
+        $user = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
-        if ($user && (int)$user['is_active'] === 1) {
+        if ($user && stock_rate_limit('forgot_password_acct|' . $user['id'], 3, 3600)) {
             $token = bin2hex(random_bytes(32));
-            $expires = date('Y-m-d H:i:s', time() + 3600);
-            $update = $conn->prepare('UPDATE users SET reset_token = ?, reset_expires = ? WHERE id = ?');
-            $update->bind_param('ssi', $token, $expires, $user['id']);
+            $tokenHash = hash('sha256', $token); // only the hash is stored
+            $update = $conn->prepare('UPDATE users SET reset_token = ?, reset_expires = (NOW() + INTERVAL 1 HOUR) WHERE id = ?');
+            $update->bind_param('si', $tokenHash, $user['id']);
             $update->execute();
             $update->close();
-            $resetLink = buildResetLink($token);
-            $subject = 'Car Rental Password Reset';
-            $body = 'Use this link to reset your password:<br><a href="' . h($resetLink) . '">' . h($resetLink) . '</a><br>This link expires in 1 hour.';
-            if (function_exists('sendEmail') && sendEmail($email, $subject, $body) === true) {
-                $success = 'A reset link has been sent to your email.';
-                $resetLink = '';
-            } else {
-                $success = 'Email is not configured, so use the reset link below. The link expires in 1 hour.';
+
+            $link = cr_absolute_url('authentication/reset_password.php?token=' . urlencode($token), true);
+            $body = '<p>Hello ' . h($user['username']) . ',</p>'
+                . '<p>A password reset was requested for your Car Rental account. Use the link below to choose a new password:</p>'
+                . '<p><a href="' . h($link) . '">' . h($link) . '</a></p>'
+                . '<p>This link expires in 1 hour. If you did not request this, you can ignore this email.</p>';
+            if (!sendEmail($email, 'Password reset', $body)) {
+                error_log('Password reset email could not be sent for user #' . (int)$user['id']);
             }
         }
-    }
     }
 }
 ?>
@@ -69,14 +58,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <form class="centered-flex" method="post">
             <div class="title-register">FORGOT PASSWORD</div>
             <div class="msg">
+                <?php if (!$emailReady): ?>
+                    <p class="alert error">Password reset by email is not available on this system. Please ask your administrator to set a new password for you.</p>
+                <?php endif; ?>
                 <?php if ($error): ?><p class="alert error"><?= h($error); ?></p><?php endif; ?>
                 <?php if ($success): ?><p class="alert success"><?= h($success); ?></p><?php endif; ?>
             </div>
-            <?php if ($resetLink): ?>
-                <p class="alert success" style="word-break:break-all;"><a href="<?= h($resetLink); ?>"><?= h($resetLink); ?></a></p>
+            <?php if ($emailReady): ?>
+                <div class="field"><input type="email" name="email" placeholder="Email" required><span class="fa fa-envelope"></span></div>
+                <div class="btn-container"><input type="submit" id="login-btn" value="Send Reset Link"></div>
             <?php endif; ?>
-            <div class="field"><input type="email" name="email" placeholder="Email" required><span class="fa fa-envelope"></span></div>
-            <div class="btn-container"><input type="submit" id="login-btn" value="Prepare Reset Link"></div>
             <div class="signup"><a href="login.php">Back to Login</a></div>
         </form>
     </div>

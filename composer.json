@@ -1,0 +1,16 @@
+{
+    "name": "car-rental/management-system",
+    "description": "Car rental management system",
+    "type": "project",
+    "require": {
+        "php": ">=8.0",
+        "setasign/fpdf": "^1.8",
+        "setasign/fpdi": "^2.6",
+        "phpmailer/phpmailer": "^6.9"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true,
+        "platform": { "php": "8.0.30" }
+    }
+}

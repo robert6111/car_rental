@@ -43,7 +43,7 @@ $stmt->bind_param("sssisssiiisdd", $reg_no, $vin, $color, $current_mileage, $ins
             header("Location: all_cars.php?added=1");
             exit;
         } else {
-            $error = "Error: " . $stmt->error;
+            $error = cr_db_error($stmt->error);
         }
 
         $stmt->close();

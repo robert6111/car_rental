@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: customer.php?updated=1");
         exit;
     } else {
-        $error = "Error: " . $stmt->error;
+        $error = cr_db_error($stmt->error);
     }
     $stmt->close();
 }
@@ -69,8 +69,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="container mt-4">
             <h2>Edit Customer</h2>
 
-            <?php if ($msg) echo "<div class='alert alert-success'>$msg</div>"; ?>
-            <?php if ($error) echo "<div class='alert alert-danger'>$error</div>"; ?>
+            <?php if ($msg) echo "<div class='alert alert-success'>" . h($msg) . "</div>"; ?>
+            <?php if ($error) echo "<div class='alert alert-danger'>" . h($error) . "</div>"; ?>
 
             <div class="card" style="padding:20px; max-width:600px;">
                 <form method="POST">

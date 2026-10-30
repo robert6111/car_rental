@@ -7,14 +7,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!stock_rate_limit('backup_create_' . (int)($_SESSION['user_id'] ?? 0), 3, 3600)) {
         $error = 'Backup limit reached. Please try again later.';
     } else {
-    $dir = __DIR__ . '/backups';
-    if (!is_dir($dir)) mkdir($dir, 0755, true);
+    $dir = cr_storage_path('backups');
     $file = $dir . '/car_rental_manual_' . date('Y-m-d_H-i-s') . '.sql';
     if (file_put_contents($file, car_rental_export_database($conn)) !== false) $msg = 'Backup created successfully: ' . basename($file);
     else $error = 'Backup could not be created. Check folder permissions.';
     }
 }
-$files = glob(__DIR__ . '/backups/*.sql') ?: [];
+$files = glob(cr_storage_path('backups') . '/*.sql') ?: [];
 rsort($files);
 ?>
 <!DOCTYPE html>

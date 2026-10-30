@@ -1,7 +1,9 @@
 # Local configuration (contains secrets)
 config/config.php
 # Customer data - never commit
-storage/
+storage/*
 backend/uploads/
 backend/backup/backups/*.sql
 *.log
+!storage/.htaccess
+!storage/index.html

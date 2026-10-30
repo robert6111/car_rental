@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header("Location: add_years.php?added=1");
                 exit;
             } else {
-                $error = "Error: " . $stmt->error;
+                $error = cr_db_error($stmt->error);
             }
         }
 

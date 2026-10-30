@@ -37,7 +37,7 @@ $username = $_SESSION['username'] ?? 'Guest';
             <div class="dropdown-menu" id="profileMenu">
                 <a href="<?= h(app_url('profile.php')); ?>">Profile</a>
                 <a href="<?= h(app_url('change_password.php')); ?>">Change Password</a>
-                <a href="<?= h(app_url('authentication/logout.php')); ?>">Logout</a>
+                <a href="<?= h(stock_action_url(app_url('authentication/logout.php'))); ?>">Logout</a>
             </div>
         </div>
     </div>

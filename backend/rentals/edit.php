@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: manage.php?updated=1");
         exit;
     } else {
-        $error = "Error: " . $stmt->error;
+        $error = cr_db_error($stmt->error);
     }
 
     $stmt->close();

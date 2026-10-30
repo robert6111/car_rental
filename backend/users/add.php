@@ -6,12 +6,12 @@ $roles = $conn->query("SELECT * FROM roles ORDER BY id ASC");
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
-    $email = trim($_POST['email'] ?? '');
+    $email = strtolower(trim($_POST['email'] ?? ''));
     $passwordRaw = (string)($_POST['password'] ?? '');
     $role_id = intval($_POST['role_id'] ?? 0);
     $is_active = isset($_POST['is_active']) ? 1 : 0;
 
-    if ($username === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($passwordRaw) < 8 || !$role_id) {
+    if ($username === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($passwordRaw) < 8 || $role_id < 1 || $role_id > 5) {
         $error = 'Enter username, valid email, role, and a password of at least 8 characters.';
     } else {
         $check = $conn->prepare('SELECT id FROM users WHERE email = ? OR username = ? LIMIT 1');
@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $conn->query("UPDATE users SET is_active = 0 WHERE email = 'setup@carrental.local'");
                     $msg .= ' Temporary setup account has been disabled.';
                 }
-            } else $error = 'Error: ' . $stmt->error;
+            } else { error_log('User create failed: ' . $stmt->error); $error = 'The user could not be created. Please try again.'; }
             $stmt->close();
         }
     }

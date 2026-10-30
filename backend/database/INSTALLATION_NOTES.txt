@@ -1,12 +1,21 @@
-CAR RENTAL CUSTOMER INSTALLATION
+CAR RENTAL - INSTALLATION
 
-1. Copy the full car_rental-development folder into XAMPP htdocs.
-2. Start Apache and MySQL in XAMPP.
-3. Open phpMyAdmin.
-4. Import backend/database/database.sql.
-5. Open: http://localhost/car_rental-development/backend/authentication/login.php
-6. Login with:
-   Email: setup@carrental.local
-   Password: SetupAdmin@2026!
-7. Go to Manage Users > Add User and create the real admin account.
-8. Logout, login with the real admin, then disable/delete the setup account.
+1. Copy the whole car_rental folder to the web server (for XAMPP: C:\xampp\htdocs\car_rental).
+2. Create a MySQL/MariaDB database (e.g. car_rental) and a database user with access to it.
+3. Import backend/database/database.sql into that database (phpMyAdmin > Import).
+4. Copy config/config.example.php to config/config.php and fill in:
+   - db: host, name, user, password
+   - app.url: the full address of the backend folder
+     (e.g. https://rent.example.com/backend or http://192.168.1.20/car_rental/backend)
+   - mail: SMTP details, so password-reset emails can be sent (optional)
+5. Open the address in a browser (e.g. http://localhost/car_rental/).
+   The first visit opens "Create Admin Account": create the main administrator there.
+6. Log in and create the other staff accounts under Manage Users.
+
+Security notes
+- config/config.php contains passwords. Never share it.
+- Uploaded documents, backups and logs are kept in the storage/ folder, which is blocked
+  from the web. On hosting, you can move it outside the public folder and set 'storage_path'.
+- On Apache, .htaccess files protect private folders (AllowOverride must be enabled).
+  On nginx/IIS, deny web access to: config/, storage/, vendor/, backend/includes/*.php, backend/database/.
+- Use HTTPS on any system reachable from the internet.

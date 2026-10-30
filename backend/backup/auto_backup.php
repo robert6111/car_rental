@@ -22,8 +22,7 @@ function car_rental_export_database(mysqli $conn): string {
 }
 
 function run_daily_auto_backup(mysqli $conn): void {
-    $dir = __DIR__ . '/backups';
-    if (!is_dir($dir)) mkdir($dir, 0755, true);
+    $dir = cr_storage_path('backups');
     $todayFile = $dir . '/car_rental_auto_' . date('Y-m-d') . '.sql';
     if (!file_exists($todayFile)) {
         @file_put_contents($todayFile, car_rental_export_database($conn));

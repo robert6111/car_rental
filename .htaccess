@@ -1,0 +1,14 @@
+# Car Rental - root protection
+Options -Indexes
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Block private folders and files from the web
+    RewriteRule ^(config|storage|vendor|\.git)(/|$) - [F,L]
+    RewriteRule ^(composer\.(json|lock)|.*\.(md|txt|log|sql|lock))$ - [F,L]
+</IfModule>
+
+<FilesMatch "^(composer\.(json|lock)|.*\.(md|txt|log|sql))$">
+    Require all denied
+</FilesMatch>

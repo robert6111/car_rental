@@ -22,6 +22,7 @@ $role_id = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
 
 
 
+                <?php if (stock_has_permission('office_manage')): ?>
                 <li class="has_sub">
                     <a href="javascript:void(0);" class="waves-effect sidebar-toggle-link">
                         <i class="mdi mdi-folder-file"></i> <span> Office Modules </span>
@@ -37,8 +38,9 @@ $role_id = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
                         <li><a href="<?= h(app_url('rentals/not_returned.php')); ?>">Not Returned / KABIS Cases</a></li>
                     </ul>
                 </li>
+                <?php endif; ?>
 
-                <?php if ($role_id === 1): ?>
+                <?php if (stock_has_permission('users_manage')): ?>
                     <li class="has_sub">
                         <a href="javascript:void(0);" class="waves-effect sidebar-toggle-link">
                             <i class="mdi mdi-account-multiple"></i> <span> Manage Users</span>
@@ -57,12 +59,14 @@ $role_id = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
                         <span class="menu-arrow"></span>
                     </a>
                     <ul class="list-unstyled">
-                        <?php if ($role_id === 1): ?>
+                        <?php if (stock_has_permission('cars_manage')): ?>
                             <li><a href="<?= h(app_url('cars/add.php')); ?>">Add Car</a></li>
                             <li><a href="<?= h(app_url('cars/all_cars.php')); ?>">Manage Cars</a></li>
                             <li><a href="<?= h(app_url('cars/add_make.php')); ?>">Add Make</a></li>
                             <li><a href="<?= h(app_url('cars/add_model.php')); ?>">Add Model</a></li>
                             <li><a href="<?= h(app_url('cars/add_years.php')); ?>">Add Years</a></li>
+                        <?php endif; ?>
+                        <?php if (stock_has_permission('maintenance_manage')): ?>
                             <li><a href="<?= h(app_url('maintainance_and_repair/damage.php')); ?>">Add Damage</a></li>
                             <li><a href="<?= h(app_url('maintainance_and_repair/service.php')); ?>">Add Service Records</a></li>
                             <li><a href="<?= h(app_url('maintainance_and_repair/service_list.php')); ?>">Service Records</a></li>
@@ -74,6 +78,7 @@ $role_id = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
 
 
 
+                <?php if (stock_has_permission('rentals_manage')): ?>
                 <li class="has_sub">
                     <a href="javascript:void(0);" class="waves-effect sidebar-toggle-link">
                         <i class="mdi mdi-calendar-check"></i> <span> Reservations </span>
@@ -85,7 +90,9 @@ $role_id = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
                         <li><a href="<?= h(app_url('reservations/online_booking.php')); ?>" target="_blank">Online Booking Form</a></li>
                     </ul>
                 </li>
+                <?php endif; ?>
 
+                <?php if (stock_has_permission('rentals_manage')): ?>
                 <li class="has_sub">
                     <a href="javascript:void(0);" class="waves-effect sidebar-toggle-link">
                         <i class="mdi mdi-calendar"></i> <span> Rentals </span>
@@ -97,7 +104,9 @@ $role_id = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
                         <li><a href="<?= h(app_url('rentals/manage.php')); ?>">Manage Rentals</a></li>
                     </ul>
                 </li>
+                <?php endif; ?>
 
+                <?php if (stock_has_permission('customers_manage')): ?>
                 <li class="has_sub">
                     <a href="javascript:void(0);" class="waves-effect sidebar-toggle-link">
                         <i class="mdi mdi-account"></i> <span> Customers </span>
@@ -108,7 +117,9 @@ $role_id = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
                         <li><a href="<?= h(app_url('customers/customer.php')); ?>">Manage Customers</a></li>
                     </ul>
                 </li>
+                <?php endif; ?>
 
+                <?php if (stock_has_permission('payments_manage')): ?>
                 <li class="has_sub">
                     <a href="javascript:void(0);" class="waves-effect sidebar-toggle-link">
                         <i class="mdi mdi-cash-multiple"></i> <span> Payments </span>
@@ -118,8 +129,9 @@ $role_id = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
                         <li><a href="<?= h(app_url('paying/manage.php')); ?>">Manage Payments</a></li>
                     </ul>
                 </li>
+                <?php endif; ?>
 
-                <?php if ($role_id === 1): ?>
+                <?php if (stock_has_permission('reports_view')): ?>
                     <li class="has_sub">
                         <a href="javascript:void(0);" class="waves-effect sidebar-toggle-link">
                             <i class="mdi mdi-chart-bar"></i> <span> Reports </span>

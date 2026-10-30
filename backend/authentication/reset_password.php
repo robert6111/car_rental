@@ -1,48 +1,49 @@
 <?php
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-error_reporting(0);
-
 require __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/app.php';
 
 $error = '';
 $success = '';
-$token = trim($_GET['token'] ?? $_POST['token'] ?? '');
+$token = trim((string)($_GET['token'] ?? $_POST['token'] ?? ''));
 $user = null;
 
-if ($token !== '') {
+if (!preg_match('/^[a-f0-9]{64}$/', $token)) {
+    $token = '';
+} elseif (!stock_rate_limit('reset_password_lookup', 20, 3600)) {
+    $error = 'Too many attempts. Please try again later.';
+    $token = '';
+} else {
+    $tokenHash = hash('sha256', $token);
     $stmt = $conn->prepare('SELECT id FROM users WHERE reset_token = ? AND reset_expires > NOW() AND is_active = 1 LIMIT 1');
-    $stmt->bind_param('s', $token);
+    $stmt->bind_param('s', $tokenHash);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $user = $result ? $result->fetch_assoc() : null;
+    $user = $stmt->get_result()->fetch_assoc() ?: null;
     $stmt->close();
 }
 
-if (!$user) {
+if (!$user && !$error) {
     $error = 'This reset link is invalid or has expired.';
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $user) {
-    if (!stock_rate_limit('reset_password', 5, 3600)) {
-        $error = 'Too many password reset attempts. Please try again later.';
+    $password = (string)($_POST['password'] ?? '');
+    $confirm = (string)($_POST['confirm_password'] ?? '');
+    if (strlen($password) < 8) {
+        $error = 'Password must be at least 8 characters.';
+    } elseif ($password !== $confirm) {
+        $error = 'Passwords do not match.';
     } else {
-        $password = (string)($_POST['password'] ?? '');
-        $confirm = (string)($_POST['confirm_password'] ?? '');
-        if (strlen($password) < 8) {
-            $error = 'Password must be at least 8 characters.';
-        } elseif ($password !== $confirm) {
-            $error = 'Passwords do not match.';
+        $hash = password_hash($password, PASSWORD_DEFAULT);
+        $stmt = $conn->prepare('UPDATE users SET password = ?, reset_token = NULL, reset_expires = NULL WHERE id = ?');
+        $stmt->bind_param('si', $hash, $user['id']);
+        if ($stmt->execute()) {
+            cr_bump_session_version($conn, (int)$user['id']); // sign out all existing sessions
+            $success = 'Password changed successfully. You can now login.';
         } else {
-            $hash = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $conn->prepare('UPDATE users SET password = ?, reset_token = NULL, reset_expires = NULL WHERE id = ?');
-            $stmt->bind_param('si', $hash, $user['id']);
-            if ($stmt->execute()) $success = 'Password changed successfully. You can now login.';
-            else $error = 'Password could not be changed.';
-            $stmt->close();
-            $user = null;
+            $error = 'Password could not be changed.';
         }
+        $stmt->close();
+        $user = null;
     }
 }
 ?>

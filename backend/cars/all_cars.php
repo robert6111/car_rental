@@ -72,12 +72,12 @@ if (isset($_GET['error']) && $_GET['error'] === 'has_rentals') $error = 'This ca
     </tr>
     <?php while($row = $result->fetch_assoc()) : ?>
     <tr>
-        <td><?= $row['id'] ?></td>
-        <td><?= $row['reg_no'] ?></td>
-        <td><?= $row['make'] ?></td>
-        <td><?= $row['model'] ?></td>
-        <td><?= $row['car_year'] ?></td>
-        <td class="status status-<?= $row['availability_status'] ?>"><?= htmlentities($row['availability_status']) ?></td>
+        <td><?= (int)$row['id'] ?></td>
+        <td><?= h($row['reg_no']) ?></td>
+        <td><?= h($row['make']) ?></td>
+        <td><?= h($row['model']) ?></td>
+        <td><?= h($row['car_year']) ?></td>
+        <td class="status status-<?= h(preg_replace('/[^A-Za-z]/', '', (string)$row['availability_status'])) ?>"><?= h($row['availability_status']) ?></td>
         <td><?= h($row['color'] ?? '') ?></td>
         <td><?= h($row['current_mileage'] ?? '') ?></td>
         <td><?= h($row['insurance_expiry'] ?? '') ?></td>

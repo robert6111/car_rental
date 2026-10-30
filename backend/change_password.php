@@ -24,7 +24,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $hash = password_hash($new, PASSWORD_DEFAULT);
         $update = $conn->prepare('UPDATE users SET password = ? WHERE id = ?');
         $update->bind_param('si', $hash, $_SESSION['user_id']);
-        if ($update->execute()) $msg = 'Password changed successfully.';
+        if ($update->execute()) {
+            cr_bump_session_version($conn, (int)$_SESSION['user_id']); // signs out other devices
+            $msg = 'Password changed successfully. Other devices have been signed out.';
+        }
         else $error = 'Password could not be changed.';
         $update->close();
     }

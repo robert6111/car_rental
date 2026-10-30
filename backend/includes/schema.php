@@ -67,6 +67,19 @@ function ensure_full_car_rental_schema(mysqli $conn): void {
     cr_add_column_if_missing($conn, 'car_service', 'supplier', "supplier VARCHAR(150) NULL AFTER cost");
     cr_add_column_if_missing($conn, 'car_service', 'status', "status VARCHAR(40) NOT NULL DEFAULT 'Completed' AFTER supplier");
 
+    // Security: bumping session_version logs a user out everywhere (password change, role change, deactivation).
+    cr_add_column_if_missing($conn, 'users', 'session_version', "session_version INT NOT NULL DEFAULT 0 AFTER is_active");
+    cr_add_column_if_missing($conn, 'documents', 'original_name', "original_name VARCHAR(255) NULL AFTER file_path");
+    cr_add_column_if_missing($conn, 'documents', 'mime_type', "mime_type VARCHAR(100) NULL AFTER original_name");
+
+    // Server-side rate limiting (login, password reset, public booking). Not bypassable by clearing cookies.
+    @$conn->query("CREATE TABLE IF NOT EXISTS rate_limits (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        bucket VARCHAR(190) NOT NULL,
+        created_at DATETIME NOT NULL,
+        KEY idx_rate_bucket (bucket, created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
     @$conn->query("INSERT IGNORE INTO roles (id, name) VALUES (1,'Admin'),(2,'Staff'),(3,'Manager'),(4,'Cashier'),(5,'Maintenance')");
 
     @$conn->query("CREATE TABLE IF NOT EXISTS reservations (
@@ -98,6 +111,8 @@ function ensure_full_car_rental_schema(mysqli $conn): void {
         document_type VARCHAR(80) NOT NULL,
         title VARCHAR(255) NOT NULL,
         file_path VARCHAR(500) NULL,
+        original_name VARCHAR(255) NULL,
+        mime_type VARCHAR(100) NULL,
         expiry_date DATE NULL,
         notes TEXT NULL,
         uploaded_by INT NULL,
