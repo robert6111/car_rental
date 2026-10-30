@@ -115,21 +115,6 @@ function calculate_rental_total(mysqli $conn, int $customerId, int $carId, strin
     ];
 }
 
-function date_days_after_today(?string $date): int {
-    if (!$date) return 0;
-    try { $end = new DateTimeImmutable($date); $today = new DateTimeImmutable('today'); }
-    catch (Exception $e) { return 0; }
-    if ($today <= $end) return 0;
-    return (int)$end->diff($today)->days;
-}
-
-function overdue_same_day_completion_needed(?string $status, ?string $startDate, ?string $endDate): bool {
-    if ($status !== 'Active' || !$startDate || !$endDate || $startDate !== $endDate) return false;
-    try { $end = new DateTimeImmutable($endDate); $today = new DateTimeImmutable('today'); }
-    catch (Exception $e) { return false; }
-    return $today >= $end;
-}
-
 /**
  * Balance of a rental. $lateInterest is the recorded interest from rental_charges
  * (see cr_sql_late_interest() / cr_rental_bill() in rental_status.php).
@@ -144,39 +129,6 @@ function rental_bill_summary(float $rentalTotal, float $totalPaid, ?string $endD
 
 function normalize_plate(string $plate): string {
     return strtoupper(preg_replace('/\s+/', ' ', trim($plate)));
-}
-
-
-
-/** Parses a typed money amount (both 1,500.50 and 1.500,50). Invalid input gives 0. */
-function money_value($value): float {
-    return cr_parse_money($value) ?? 0.0;
-}
-
-function rental_period_conflicts(mysqli $conn, int $carId, string $startDate, string $endDate, int $excludeRentalId = 0): bool {
-    if ($carId <= 0 || !$startDate || !$endDate) return false;
-    $sql = "SELECT id FROM rentals WHERE cars_id=? AND status IN ('Pending','Active') AND NOT (end_date < ? OR start_date > ?)";
-    if ($excludeRentalId > 0) $sql .= " AND id<>?";
-    $stmt = $conn->prepare($sql);
-    if ($excludeRentalId > 0) $stmt->bind_param('issi', $carId, $startDate, $endDate, $excludeRentalId);
-    else $stmt->bind_param('iss', $carId, $startDate, $endDate);
-    $stmt->execute();
-    $exists = $stmt->get_result()->num_rows > 0;
-    $stmt->close();
-    return $exists;
-}
-
-function reservation_period_conflicts(mysqli $conn, int $carId, string $startDate, string $endDate, int $excludeReservationId = 0): bool {
-    if ($carId <= 0 || !$startDate || !$endDate) return false;
-    $sql = "SELECT id FROM reservations WHERE car_id=? AND status IN ('Pending','Confirmed') AND NOT (dropoff_date < ? OR pickup_date > ?)";
-    if ($excludeReservationId > 0) $sql .= " AND id<>?";
-    $stmt = $conn->prepare($sql);
-    if ($excludeReservationId > 0) $stmt->bind_param('issi', $carId, $startDate, $endDate, $excludeReservationId);
-    else $stmt->bind_param('iss', $carId, $startDate, $endDate);
-    $stmt->execute();
-    $exists = $stmt->get_result()->num_rows > 0;
-    $stmt->close();
-    return $exists;
 }
 
 function car_display_name(array $row): string {

@@ -85,7 +85,8 @@ $result = $conn->query($sql);
 if (!$result) {
     error_log('Query failed: ' . $conn->error);
     http_response_code(500);
-    exit('Something went wrong. Please try again.');
+    stock_message_page('Something went wrong', 'The car inventory could not be loaded. Please try again.', app_url('dashboard.php'), 'Back to dashboard');
+    exit;
 }
 ?>
 

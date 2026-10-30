@@ -48,21 +48,7 @@ if ($stmt) {
 }
 $today = cr_today();
 ?>
-<?php
-// Small page styles for the collapsible "Confirm return" form in table rows.
-$returnFormStyle = '<style>
-.return-box { display: inline-block; vertical-align: top; }
-.return-box > summary { list-style: none; }
-.return-box > summary::-webkit-details-marker { display: none; }
-.return-box[open] > summary { background: var(--surface-3); color: var(--text); border-color: var(--border-strong); }
-.return-form { display: grid; gap: 4px; width: 230px; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); white-space: normal; text-align: left; }
-.return-form label { margin: 4px 0 0; font-size: 12.5px; }
-.return-form input { min-height: 32px !important; padding: 4px 8px !important; font-size: 13.5px !important; }
-.return-form button { margin-top: 6px; }
-.card-head > .filters { flex: 1; }
-</style>';
-?>
-<?php cr_layout_start('Active rentals', ['head' => $returnFormStyle]); ?>
+<?php cr_layout_start('Active rentals'); ?>
 <?= cr_page_header('Active rentals', 'Cars that are out with customers right now. Confirm the return when a car comes back.', '<a class="btn btn-secondary" href="manage.php">' . cr_icon('list') . ' All rentals</a>'); ?>
 <?= cr_alerts($msg, $error); ?>
 
@@ -108,16 +94,16 @@ $returnFormStyle = '<style>
                         <?php else: ?><?= cr_status_badge($row['rental_status']) ?><?php endif; ?>
                     </td>
                     <td class="actions-cell">
-                        <details class="return-box">
+                        <details class="row-form">
                             <summary class="btn btn-sm btn-success"><?= cr_icon('check', 'icon-sm') ?> Confirm return</summary>
-                            <form method="POST" action="manage.php" class="return-form" onsubmit="return confirm('Confirm that the car of rental #<?= (int)$row['id'] ?> has been returned?')">
+                            <form method="POST" action="manage.php" class="row-form-body">
                                 <input type="hidden" name="back" value="active.php">
                                 <input type="hidden" name="rental_id" value="<?= (int)$row['id'] ?>">
                                 <label for="return_mileage_<?= (int)$row['id'] ?>">Return mileage <span class="opt">(optional)</span></label>
                                 <input type="text" inputmode="numeric" id="return_mileage_<?= (int)$row['id'] ?>" name="return_mileage" placeholder="Mileage">
                                 <label for="return_notes_<?= (int)$row['id'] ?>">Notes <span class="opt">(optional)</span></label>
                                 <input type="text" id="return_notes_<?= (int)$row['id'] ?>" name="return_notes" placeholder="Notes" maxlength="1000">
-                                <button type="submit" name="confirm_return" value="1" class="btn btn-sm btn-success">Confirm return</button>
+                                <button type="submit" name="confirm_return" value="1" class="btn btn-sm btn-success" data-confirm="Confirm that the car of rental #<?= (int)$row['id'] ?> has been returned?">Confirm return</button>
                             </form>
                         </details>
                     </td>

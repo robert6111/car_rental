@@ -12,7 +12,6 @@ SET FOREIGN_KEY_CHECKS=0;
 -- DROP TABLE IF EXISTS fuel_logs;
 -- DROP TABLE IF EXISTS documents;
 -- DROP TABLE IF EXISTS reservations;
--- DROP TABLE IF EXISTS locations;
 -- DROP TABLE IF EXISTS car_service;
 -- DROP TABLE IF EXISTS car_damages;
 -- DROP TABLE IF EXISTS payment;
@@ -135,15 +134,6 @@ CREATE TABLE payment_method (
   expiry_date DATE DEFAULT NULL,
   CVV INT DEFAULT NULL,
   PRIMARY KEY (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE locations (
-  id INT NOT NULL AUTO_INCREMENT,
-  name VARCHAR(255) NOT NULL,
-  rental_id INT NOT NULL,
-  PRIMARY KEY (id),
-  KEY fk_location_rental (rental_id),
-  CONSTRAINT fk_location_rental FOREIGN KEY (rental_id) REFERENCES rentals (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE car_damages (
@@ -391,4 +381,4 @@ ALTER TABLE customers ADD INDEX idx_customer_email (email);
 ALTER TABLE cars ADD INDEX idx_car_status (availability_status);
 ALTER TABLE notifications ADD INDEX idx_notification_created (created_at);
 
-INSERT INTO settings (setting_key, setting_value) VALUES ('schema_version', '4');
+INSERT INTO settings (setting_key, setting_value) VALUES ('schema_version', '5');

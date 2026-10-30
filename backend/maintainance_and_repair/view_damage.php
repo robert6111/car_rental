@@ -1,8 +1,8 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 include __DIR__ . '/../includes/db.php';
-$id = isset($_GET['id']) ? intval($_GET['id']) : 0; if ($id <= 0) die("Invalid damage ID.");
-$result = $conn->query("SELECT cd.*, cars.reg_no, makes.name AS make_name, models.name AS model_name, r.id AS rental_no, r.start_date, r.end_date, r.status AS rental_status, c.full_name AS renter_name, c.phone_number AS renter_phone, c.email AS renter_email FROM car_damages cd LEFT JOIN cars ON cd.car_id=cars.id LEFT JOIN makes ON cars.make_id=makes.id LEFT JOIN models ON cars.model_id=models.id LEFT JOIN rentals r ON cd.rental_id=r.id LEFT JOIN customers c ON r.customer_id=c.id WHERE cd.id=$id");
+$id = (int)($_GET['id'] ?? 0);
+$result = $id > 0 ? $conn->query("SELECT cd.*, cars.reg_no, makes.name AS make_name, models.name AS model_name, r.id AS rental_no, r.start_date, r.end_date, r.status AS rental_status, c.full_name AS renter_name, c.phone_number AS renter_phone, c.email AS renter_email FROM car_damages cd LEFT JOIN cars ON cd.car_id=cars.id LEFT JOIN makes ON cars.make_id=makes.id LEFT JOIN models ON cars.model_id=models.id LEFT JOIN rentals r ON cd.rental_id=r.id LEFT JOIN customers c ON r.customer_id=c.id WHERE cd.id=$id") : false;
 if (!$result || $result->num_rows === 0) { $_SESSION['error'] = "Damage record not found."; header("Location: list_damage.php"); exit; }
 $damage = $result->fetch_assoc();
 ?>

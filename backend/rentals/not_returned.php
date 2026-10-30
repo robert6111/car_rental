@@ -70,23 +70,9 @@ $cases = $conn->query("SELECT n.*,c.full_name,ca.reg_no,r.end_date FROM not_retu
 if (!$overdue || !$cases) $error = cr_db_error($conn->error, 'The list could not be loaded. Please try again.');
 ?>
 <?php
-// Small page styles for the collapsible "Confirm return" form in table rows.
-$returnFormStyle = '<style>
-.return-box { display: inline-block; vertical-align: top; }
-.return-box > summary { list-style: none; }
-.return-box > summary::-webkit-details-marker { display: none; }
-.return-box[open] > summary { background: var(--surface-3); color: var(--text); border-color: var(--border-strong); }
-.return-form { display: grid; gap: 4px; width: 230px; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); white-space: normal; text-align: left; }
-.return-form label { margin: 4px 0 0; font-size: 12.5px; }
-.return-form input { min-height: 32px !important; padding: 4px 8px !important; font-size: 13.5px !important; }
-.return-form button { margin-top: 6px; }
-.card-head > .filters { flex: 1; }
-</style>';
-?>
-<?php
 $nrSubtitle = 'Internal case log for cars not returned on time.';
 if (cr_setting('authority_report_name') !== '') $nrSubtitle .= ' Use the case reference when reporting to ' . cr_setting('authority_report_name') . '.';
-cr_layout_start(cr_not_returned_title(), ['head' => $returnFormStyle]);
+cr_layout_start(cr_not_returned_title());
 ?>
 <?= cr_page_header(cr_not_returned_title(), $nrSubtitle); ?>
 <?= cr_alerts($msg, $error); ?>
@@ -117,16 +103,16 @@ cr_layout_start(cr_not_returned_title(), ['head' => $returnFormStyle]);
                         <?php else: ?>
                             <a class="btn btn-sm btn-danger" href="<?= h(stock_action_url('not_returned.php?create=' . (int)$o['id'])) ?>"><?= cr_icon('alert', 'icon-sm') ?> Open case</a>
                         <?php endif; ?>
-                        <details class="return-box">
+                        <details class="row-form">
                             <summary class="btn btn-sm btn-success"><?= cr_icon('check', 'icon-sm') ?> Confirm return</summary>
-                            <form method="POST" action="manage.php" class="return-form" onsubmit="return confirm('Confirm that the car of rental #<?= (int)$o['id'] ?> has been returned?')">
+                            <form method="POST" action="manage.php" class="row-form-body">
                                 <input type="hidden" name="back" value="not_returned.php">
                                 <input type="hidden" name="rental_id" value="<?= (int)$o['id'] ?>">
                                 <label for="return_mileage_<?= (int)$o['id'] ?>">Return mileage <span class="opt">(optional)</span></label>
                                 <input type="text" inputmode="numeric" id="return_mileage_<?= (int)$o['id'] ?>" name="return_mileage" placeholder="Mileage">
                                 <label for="return_notes_<?= (int)$o['id'] ?>">Notes <span class="opt">(optional)</span></label>
                                 <input type="text" id="return_notes_<?= (int)$o['id'] ?>" name="return_notes" placeholder="Notes" maxlength="1000">
-                                <button type="submit" name="confirm_return" value="1" class="btn btn-sm btn-success">Confirm return</button>
+                                <button type="submit" name="confirm_return" value="1" class="btn btn-sm btn-success" data-confirm="Confirm that the car of rental #<?= (int)$o['id'] ?> has been returned?">Confirm return</button>
                             </form>
                         </details>
                     </td>

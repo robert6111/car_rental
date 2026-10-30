@@ -10,7 +10,7 @@ CAR RENTAL - INSTALLATION
    - mail: SMTP details, so password-reset emails can be sent (optional)
 5. Open the address in a browser (e.g. http://localhost/car_rental/).
    The first visit opens "Create Admin Account": create the main administrator there.
-6. Log in and create the other staff accounts under Manage Users.
+6. Log in and create the other staff accounts under Users.
 7. Set up the scheduled task (below).
 
 Scheduled task (rental statuses, late interest, daily backup)

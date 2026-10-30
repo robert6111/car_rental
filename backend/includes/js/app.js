@@ -79,7 +79,7 @@
     /* Wide tables scroll sideways on phones instead of breaking the page. */
     document.querySelectorAll('.app-content table').forEach(function (table) {
         var p = table.parentElement;
-        if (p && (p.classList.contains('table-wrap') || p.classList.contains('table-responsive'))) return;
+        if (p && p.classList.contains('table-wrap')) return;
         var wrap = document.createElement('div');
         wrap.className = 'table-wrap';
         p.insertBefore(wrap, table);

@@ -69,17 +69,7 @@ $stmt->close();
 $methods = cr_payment_methods();
 $lateRate = late_interest_daily_fraction();
 ?>
-<?php cr_layout_start('Payments', ['head' => '<style>
-.pay-box { display: inline-block; vertical-align: top; }
-.pay-box > summary { list-style: none; }
-.pay-box > summary::-webkit-details-marker { display: none; }
-.pay-box[open] > summary { background: var(--primary-hover); }
-.pay-form { display: grid; gap: 4px; width: 230px; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); white-space: normal; text-align: left; }
-.pay-form label { margin: 4px 0 0; font-size: 12.5px; }
-.pay-form input, .pay-form select { min-height: 32px !important; padding: 4px 8px !important; font-size: 13.5px !important; }
-.pay-form button { margin-top: 6px; }
-.card-head > .filters { flex: 1; }
-</style>']); ?>
+<?php cr_layout_start('Payments'); ?>
 <?= cr_page_header('Payments', 'Track rental payments, balances, late-payment interest and payment history.'); ?>
 <?php if ($flash): ?><?= cr_alert(($flash['type'] ?? '') === 'success' ? 'success' : 'error', (string)($flash['text'] ?? '')); ?><?php endif; ?>
 <?= cr_alert('info', 'Late interest: ' . ($lateRate > 0 ? cr_number($lateRate * 100, 2) . '% per day of the unpaid rental cost, for every day after the rental end date until it is paid. Interest already charged stays owed.' : 'switched off.')); ?>
@@ -127,9 +117,9 @@ $lateRate = late_interest_daily_fraction();
                     <td class="actions-cell">
                         <a href="history.php?rental_id=<?= $rid; ?>" class="btn btn-sm btn-secondary"><?= cr_icon('clock', 'icon-sm'); ?> History</a>
                         <?php if((float)$bill['remaining']>0): ?>
-                        <details class="pay-box">
+                        <details class="row-form">
                             <summary class="btn btn-sm"><?= cr_icon('plus', 'icon-sm'); ?> Add payment</summary>
-                            <form action="manage.php" method="POST" class="pay-form">
+                            <form action="manage.php" method="POST" class="row-form-body">
                                 <input type="hidden" name="rental_id" value="<?= $rid; ?>">
                                 <input type="hidden" name="q" value="<?= h($q); ?>">
                                 <input type="hidden" name="page" value="<?= (int)$pg['page']; ?>">

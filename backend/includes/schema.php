@@ -4,7 +4,7 @@
  * already ran, so on a normal page load this costs nothing. Raise CR_SCHEMA_VERSION and
  * add a block in cr_run_migrations() whenever the database structure changes.
  */
-if (!defined('CR_SCHEMA_VERSION')) define('CR_SCHEMA_VERSION', 4);
+if (!defined('CR_SCHEMA_VERSION')) define('CR_SCHEMA_VERSION', 5);
 
 function cr_migrate_if_needed(mysqli $conn): void {
     $current = (int)($GLOBALS['__cr_settings']['schema_version'] ?? 0);
@@ -105,6 +105,14 @@ function cr_run_migrations(mysqli $conn, int $from, bool $settingsExisted): void
         cr_add_index_if_missing($conn, 'customers', 'idx_customer_email', 'INDEX idx_customer_email (email)');
         cr_add_index_if_missing($conn, 'cars', 'idx_car_status', 'INDEX idx_car_status (availability_status)');
         cr_add_index_if_missing($conn, 'notifications', 'idx_notification_created', 'INDEX idx_notification_created (created_at)');
+    }
+
+    if ($from < 5) {
+        // The old 'locations' table was never used by the system. Drop it only when it is empty.
+        if (cr_table_exists($conn, 'locations')) {
+            $r = $conn->query('SELECT 1 FROM locations LIMIT 1');
+            if ($r && $r->num_rows === 0) $conn->query('DROP TABLE locations');
+        }
     }
 }
 
