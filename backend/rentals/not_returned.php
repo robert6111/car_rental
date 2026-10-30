@@ -69,6 +69,112 @@ $pg = cr_page_count($conn, cr_page(), "SELECT COUNT(*) FROM not_returned_cases")
 $cases = $conn->query("SELECT n.*,c.full_name,ca.reg_no,r.end_date FROM not_returned_cases n LEFT JOIN customers c ON n.customer_id=c.id LEFT JOIN cars ca ON n.car_id=ca.id LEFT JOIN rentals r ON n.rental_id=r.id ORDER BY n.id DESC" . cr_page_sql($pg));
 if (!$overdue || !$cases) $error = cr_db_error($conn->error, 'The list could not be loaded. Please try again.');
 ?>
-<!DOCTYPE html><html><head><meta charset="UTF-8"><title><?=h(cr_not_returned_title())?></title><style>.success-msg{color:green;font-weight:700;margin:10px 0}.error-msg{color:#b91c1c;font-weight:700;margin:10px 0}.return-form{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}.return-form input{width:90px;padding:4px}.return-form button{padding:5px 8px;border:0;border-radius:3px;background:#16a34a;color:#fff;cursor:pointer}</style></head><body><?php include __DIR__.'/../includes/header.php'; include __DIR__.'/../includes/leftsidebar.php';?><div class="content-page"><h2><?=h(cr_not_returned_title())?></h2><p>Internal case log for cars not returned on time.<?php if(cr_setting('authority_report_name')!==''):?> Use the case reference when reporting to <?=h(cr_setting('authority_report_name'))?>.<?php endif;?></p><?php if($msg):?><p class="success-msg"><?=h($msg)?></p><?php endif;?><?php if($error):?><p class="error-msg"><?=h($error)?></p><?php endif;?>
-<h3>Overdue – Car Not Returned</h3><table class="table" border="1" cellpadding="10"><tr><th>Rental</th><th>Customer</th><th>Car</th><th>Due Date</th><th>Action</th></tr><?php if($overdue&&$overdue->num_rows):while($o=$overdue->fetch_assoc()):?><tr><td>#<?=h($o['id'])?></td><td><?=h($o['full_name'])?></td><td><?=h($o['reg_no'])?></td><td><?= h(cr_date($o['end_date'])) ?></td><td><?php if($o['open_case']):?>Case <?=h($o['open_case'])?> open<?php else:?><a class="btn btn-danger" href="<?=h(stock_action_url('not_returned.php?create=' . (int)$o['id']))?>">Open Case</a><?php endif;?><form method="POST" action="manage.php" class="return-form" onsubmit="return confirm('Confirm that the car of rental #<?= (int)$o['id'] ?> has been returned?')"><input type="hidden" name="back" value="not_returned.php"><input type="hidden" name="rental_id" value="<?= (int)$o['id'] ?>"><input type="text" inputmode="numeric" name="return_mileage" placeholder="Mileage"><input type="text" name="return_notes" placeholder="Notes" maxlength="1000"><button type="submit" name="confirm_return" value="1">Confirm return</button></form></td></tr><?php endwhile;else:?><tr><td colspan="5">No overdue rentals.</td></tr><?php endif;?></table>
-<h3>Cases</h3><table class="table" border="1" cellpadding="10"><tr><th>Ref</th><th>Rental</th><th>Customer</th><th>Car</th><th>Status</th><th>Notes</th><th>Action</th></tr><?php if($cases&&$cases->num_rows):while($c=$cases->fetch_assoc()):?><tr><td><?=h($c['case_reference'])?></td><td>#<?=h($c['rental_id'])?></td><td><?=h($c['full_name'])?></td><td><?=h($c['reg_no'])?></td><td><?=h($c['status'])?></td><td><?=nl2br(h($c['notes']))?></td><td><?php if(!in_array($c['status'],['Resolved','Closed'],true)):?><a class="btn btn-success" href="<?=h(stock_action_url('not_returned.php?resolve=' . (int)$c['id']))?>">Resolve</a><?php endif;?></td></tr><?php endwhile;else:?><tr><td colspan="7">No cases yet.</td></tr><?php endif;?></table><?= cr_pagination($pg); ?></div></body></html>
+<?php
+// Small page styles for the collapsible "Confirm return" form in table rows.
+$returnFormStyle = '<style>
+.return-box { display: inline-block; vertical-align: top; }
+.return-box > summary { list-style: none; }
+.return-box > summary::-webkit-details-marker { display: none; }
+.return-box[open] > summary { background: var(--surface-3); color: var(--text); border-color: var(--border-strong); }
+.return-form { display: grid; gap: 4px; width: 230px; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); white-space: normal; text-align: left; }
+.return-form label { margin: 4px 0 0; font-size: 12.5px; }
+.return-form input { min-height: 32px !important; padding: 4px 8px !important; font-size: 13.5px !important; }
+.return-form button { margin-top: 6px; }
+.card-head > .filters { flex: 1; }
+</style>';
+?>
+<?php
+$nrSubtitle = 'Internal case log for cars not returned on time.';
+if (cr_setting('authority_report_name') !== '') $nrSubtitle .= ' Use the case reference when reporting to ' . cr_setting('authority_report_name') . '.';
+cr_layout_start(cr_not_returned_title(), ['head' => $returnFormStyle]);
+?>
+<?= cr_page_header(cr_not_returned_title(), $nrSubtitle); ?>
+<?= cr_alerts($msg, $error); ?>
+
+<div class="card card-flush">
+    <div class="card-head"><h2>Overdue – car not returned</h2></div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rental</th>
+                    <th>Customer</th>
+                    <th>Car</th>
+                    <th>Due date</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php if($overdue && $overdue->num_rows): while($o = $overdue->fetch_assoc()): ?>
+                <tr>
+                    <td class="muted">#<?= h($o['id']) ?></td>
+                    <td><span class="cell-title"><?= h($o['full_name']) ?></span></td>
+                    <td><span class="plate"><?= h($o['reg_no']) ?></span></td>
+                    <td class="nowrap text-danger"><?= h(cr_date($o['end_date'])) ?></td>
+                    <td class="actions-cell">
+                        <?php if($o['open_case']): ?>
+                            <?= cr_status_badge('Open', 'Case ' . $o['open_case'] . ' open') ?>
+                        <?php else: ?>
+                            <a class="btn btn-sm btn-danger" href="<?= h(stock_action_url('not_returned.php?create=' . (int)$o['id'])) ?>"><?= cr_icon('alert', 'icon-sm') ?> Open case</a>
+                        <?php endif; ?>
+                        <details class="return-box">
+                            <summary class="btn btn-sm btn-success"><?= cr_icon('check', 'icon-sm') ?> Confirm return</summary>
+                            <form method="POST" action="manage.php" class="return-form" onsubmit="return confirm('Confirm that the car of rental #<?= (int)$o['id'] ?> has been returned?')">
+                                <input type="hidden" name="back" value="not_returned.php">
+                                <input type="hidden" name="rental_id" value="<?= (int)$o['id'] ?>">
+                                <label for="return_mileage_<?= (int)$o['id'] ?>">Return mileage <span class="opt">(optional)</span></label>
+                                <input type="text" inputmode="numeric" id="return_mileage_<?= (int)$o['id'] ?>" name="return_mileage" placeholder="Mileage">
+                                <label for="return_notes_<?= (int)$o['id'] ?>">Notes <span class="opt">(optional)</span></label>
+                                <input type="text" id="return_notes_<?= (int)$o['id'] ?>" name="return_notes" placeholder="Notes" maxlength="1000">
+                                <button type="submit" name="confirm_return" value="1" class="btn btn-sm btn-success">Confirm return</button>
+                            </form>
+                        </details>
+                    </td>
+                </tr>
+            <?php endwhile; else: ?>
+                <tr><td colspan="5" class="table-empty">No overdue rentals.</td></tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card card-flush">
+    <div class="card-head"><h2>Cases</h2></div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Rental</th>
+                    <th>Customer</th>
+                    <th>Car</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php if($cases && $cases->num_rows): while($c = $cases->fetch_assoc()): ?>
+                <tr>
+                    <td class="nowrap"><span class="cell-title"><?= h($c['case_reference']) ?></span></td>
+                    <td class="muted">#<?= h($c['rental_id']) ?></td>
+                    <td><?= h($c['full_name']) ?></td>
+                    <td><?php if((string)$c['reg_no'] !== ''): ?><span class="plate"><?= h($c['reg_no']) ?></span><?php endif; ?></td>
+                    <td><?= cr_status_badge((string)$c['status']) ?></td>
+                    <td><?= nl2br(h($c['notes'])) ?></td>
+                    <td class="actions-cell">
+                        <?php if(!in_array($c['status'], ['Resolved','Closed'], true)): ?>
+                            <a class="btn btn-sm btn-success" href="<?= h(stock_action_url('not_returned.php?resolve=' . (int)$c['id'])) ?>"><?= cr_icon('check', 'icon-sm') ?> Resolve</a>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            <?php endwhile; else: ?>
+                <tr><td colspan="7" class="table-empty">No cases yet.</td></tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+    <?= cr_pagination($pg); ?>
+</div>
+<?php cr_layout_end(); ?>

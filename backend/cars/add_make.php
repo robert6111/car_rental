@@ -35,27 +35,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Make</title>
-</head>
-<body>
-<?php
-    include __DIR__ . '/../includes/header.php';
-    include __DIR__ . '/../includes/leftsidebar.php';
-?>
-    <div class="content-page">
-<h2>Add Make</h2>
-<?php if ($msg): ?><div style='color:green;'><?= h($msg) ?></div><?php endif; ?>
-<?php if ($error): ?><div style='color:red;'><?= h($error) ?></div><?php endif; ?>
-<form method="post">
-    <label>Make Name:</label>
-    <input type="text" name="make_name" maxlength="50" value="<?= h($error ? $make : '') ?>" required>
-    <button type="submit">Add Make</button>
-</form>
+<?php cr_layout_start('Add make'); ?>
+<?= cr_page_header('Add make', 'Add a car brand, such as Toyota, so cars of that make can be added.'); ?>
+<?= cr_alerts($msg, $error); ?>
+
+<form method="post" class="card card-narrow">
+    <div class="field">
+        <label for="make_name">Make name <span class="req">*</span></label>
+        <input type="text" id="make_name" name="make_name" maxlength="50" value="<?= h($error ? $make : '') ?>" required>
     </div>
-</body>
-</html>
+    <div class="form-actions">
+        <button type="submit"><?= cr_icon('plus'); ?> Add make</button>
+    </div>
+</form>
+<?php cr_layout_end(); ?>

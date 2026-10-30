@@ -14,7 +14,63 @@ $stmt->execute();
 $damages = $stmt->get_result();
 $stmt->close();
 ?>
-<!DOCTYPE html><html><head><title>Damage List</title><link rel="stylesheet" href="/../backend/includes/css/dashboard.css"><link rel="stylesheet" href="/../backend/includes/css/common.css"><link rel="stylesheet" href="/../backend/includes/css/header.css"><link rel="stylesheet" href="/../backend/includes/css/all_cars.css"><style>.filter-box{margin-bottom:20px;padding:10px;border:1px solid #ccc;display:flex;gap:10px;flex-wrap:wrap;align-items:end}.mini{display:block;color:#64748b;font-size:12px}</style></head><body><?php include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/leftsidebar.php'; ?>
-<div class="content-page"><h2>All Damages</h2><?php foreach (['success' => 'alert-success', 'error' => 'alert-error'] as $flashKey => $flashClass): if (!empty($_SESSION[$flashKey])): ?><p class="<?= $flashClass ?>"><?= h($_SESSION[$flashKey]) ?></p><?php unset($_SESSION[$flashKey]); endif; endforeach; ?><form method="GET" class="filter-box"><div><label>Search reg no / renter:</label><br><input type="text" name="q" value="<?= h($q); ?>" placeholder="Reg no or customer name"></div><div><label>Severity:</label><br><select name="severity"><option value="">All</option><?php foreach(['low'=>'Low','medium'=>'Medium','moderate'=>'Moderate','high'=>'High'] as $v=>$label): ?><option value="<?= h($v) ?>" <?= $filter_severity===$v?'selected':'' ?>><?= h($label) ?></option><?php endforeach; ?></select></div><div><label>Repaired?</label><br><select name="repaired"><option value="">All</option><option value="0" <?= $filter_repaired==='0'?'selected':'' ?>>No</option><option value="1" <?= $filter_repaired==='1'?'selected':'' ?>>Yes</option></select></div><div><button type="submit">Filter</button> <a href="list_damage.php" style="text-decoration:none;border:1px solid #ccc;padding:6px;border-radius:5px;">Clear</a></div></form>
-<table border="1" cellspacing="0" cellpadding="8" width="100%"><tr><th>ID</th><th>Car</th><th>Renter / Rental</th><th>Severity</th><th>Estimated Cost</th><th>Repaired</th><th>Actions</th></tr>
-<?php if($damages && $damages->num_rows > 0): while($row = $damages->fetch_assoc()): ?><tr><td><?= h($row['id']) ?></td><td><?= h(trim(($row['make_name'] ?? '') . ' ' . ($row['model_name'] ?? '') . ' (' . ($row['reg_no'] ?? 'N/A') . ')')) ?></td><td><?= h($row['renter_name'] ?? 'Not linked') ?><?php if($row['rental_no']): ?><span class="mini">Rental #<?= h($row['rental_no']) ?>: <?= h($row['start_date']) ?> to <?= h(cr_date($row['end_date'])) ?></span><?php endif; ?></td><td><?= h(ucfirst($row['severity'])) ?></td><td><?= money((float)$row['estimated_cost']) ?></td><td><?= $row['repaired'] ? 'Yes' : 'No' ?></td><td><a href="view_damage.php?id=<?= h($row['id']) ?>">View</a> | <a href="edit_damage.php?id=<?= h($row['id']) ?>">Edit</a></td></tr><?php endwhile; else: ?><tr><td colspan="7" style="text-align:center;">No damages found.</td></tr><?php endif; ?></table><?= cr_pagination($pg); ?></div></body></html>
+<?php cr_layout_start('Damages'); ?>
+<?= cr_page_header('Damages', 'Damage reports linked to cars and the rentals they came back from.', '<a class="btn" href="damage.php">' . cr_icon('plus') . ' Report damage</a>'); ?>
+<?php foreach (['success' => 'success', 'error' => 'error'] as $flashKey => $flashType): if (!empty($_SESSION[$flashKey])): ?><?= cr_alert($flashType, (string)$_SESSION[$flashKey]); ?><?php unset($_SESSION[$flashKey]); endif; endforeach; ?>
+
+<form method="GET" class="filters">
+    <div class="field grow">
+        <label for="q">Search reg no / renter</label>
+        <input type="text" id="q" name="q" value="<?= h($q); ?>" placeholder="Reg no or customer name">
+    </div>
+    <div class="field">
+        <label for="f_severity">Severity</label>
+        <select id="f_severity" name="severity">
+            <option value="">All</option>
+            <?php foreach (['low' => 'Low', 'medium' => 'Medium', 'moderate' => 'Moderate', 'high' => 'High'] as $v => $label): ?>
+            <option value="<?= h($v) ?>" <?= $filter_severity === $v ? 'selected' : '' ?>><?= h($label) ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="field">
+        <label for="f_repaired">Repaired?</label>
+        <select id="f_repaired" name="repaired">
+            <option value="">All</option>
+            <option value="0" <?= $filter_repaired === '0' ? 'selected' : '' ?>>No</option>
+            <option value="1" <?= $filter_repaired === '1' ? 'selected' : '' ?>>Yes</option>
+        </select>
+    </div>
+    <button type="submit"><?= cr_icon('search'); ?> Filter</button>
+    <a class="btn btn-secondary" href="list_damage.php">Clear</a>
+</form>
+
+<div class="card card-flush">
+    <div class="card-head"><h2>All damages</h2></div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>ID</th><th>Car</th><th>Renter / rental</th><th>Severity</th><th class="num">Estimated cost</th><th>Repaired</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+            <?php if ($damages && $damages->num_rows > 0): while ($row = $damages->fetch_assoc()): ?>
+                <tr>
+                    <td><?= h($row['id']) ?></td>
+                    <td><span class="cell-title"><?= h(trim(($row['make_name'] ?? '') . ' ' . ($row['model_name'] ?? ''))) ?></span> <span class="plate"><?= h($row['reg_no'] ?? 'N/A') ?></span></td>
+                    <td><?= h($row['renter_name'] ?? 'Not linked') ?><?php if ($row['rental_no']): ?><span class="cell-sub">Rental #<?= h($row['rental_no']) ?>: <?= h(cr_date($row['start_date'])) ?> to <?= h(cr_date($row['end_date'])) ?></span><?php endif; ?></td>
+                    <td><?= cr_status_badge((string)$row['severity'], ucfirst((string)$row['severity'])) ?></td>
+                    <td class="num"><?= money((float)$row['estimated_cost']) ?></td>
+                    <td><?= cr_status_badge($row['repaired'] ? 'Yes' : 'No') ?></td>
+                    <td class="actions-cell">
+                        <a class="btn btn-sm btn-secondary" href="view_damage.php?id=<?= h($row['id']) ?>"><?= cr_icon('eye', 'icon-sm'); ?> View</a>
+                        <a class="btn btn-sm btn-secondary" href="edit_damage.php?id=<?= h($row['id']) ?>"><?= cr_icon('edit', 'icon-sm'); ?> Edit</a>
+                    </td>
+                </tr>
+            <?php endwhile; else: ?>
+                <tr><td colspan="7" class="table-empty">No damages found.</td></tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+    <?= cr_pagination($pg); ?>
+</div>
+<?php cr_layout_end(); ?>

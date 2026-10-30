@@ -8,19 +8,15 @@ $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Profile</title></head>
-<body>
-<?php include __DIR__ . '/includes/header.php'; include __DIR__ . '/includes/leftsidebar.php'; ?>
-<div class="content-page">
-    <div class="card-box" style="max-width:650px;">
-        <h2>Profile</h2><br>
-        <p><strong>Username:</strong> <?= h($user['username'] ?? ''); ?></p><br>
-        <p><strong>Email:</strong> <?= h($user['email'] ?? ''); ?></p><br>
-        <p><strong>Role:</strong> <?= h($user['role_name'] ?? ''); ?></p><br>
-        <p><strong>Status:</strong> <?= !empty($user['is_active']) ? 'Active' : 'Inactive'; ?></p><br>
-        <a class="btn btn-primary" href="<?= h(app_url('change_password.php')); ?>">Change Password</a>
-    </div>
+<?php cr_layout_start('My profile'); ?>
+<?= cr_page_header('My profile', 'Your sign-in details.', '<a class="btn" href="' . h(app_url('change_password.php')) . '">' . cr_icon('key') . ' Change password</a>'); ?>
+
+<div class="card card-narrow">
+    <dl class="details">
+        <dt>Username</dt><dd><?= h($user['username'] ?? ''); ?></dd>
+        <dt>Email</dt><dd><?= h($user['email'] ?? ''); ?></dd>
+        <dt>Role</dt><dd><?= h($user['role_name'] ?? ''); ?></dd>
+        <dt>Status</dt><dd><?= !empty($user['is_active']) ? cr_status_badge('Active') : cr_status_badge('Inactive'); ?></dd>
+    </dl>
 </div>
-</body></html>
+<?php cr_layout_end(); ?>

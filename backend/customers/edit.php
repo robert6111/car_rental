@@ -45,57 +45,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Customer</title>
-</head>
-<body>
-<?php include __DIR__ . '/../includes/header.php'; ?>
-<?php include __DIR__ . '/../includes/leftsidebar.php'; ?>
-<div class="content-page">
-    <div class="main-content">
-        <div class="container mt-4">
-            <h2>Edit Customer</h2>
+<?php
+$v = function (string $field) use ($customer): string {
+    return h($customer[$field] ?? '');
+};
+?>
+<?php cr_layout_start('Edit customer'); ?>
+<a class="back-link" href="customer.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All customers</a>
+<?= cr_page_header('Edit customer', 'Update the contact, licence and identity details of this customer.'); ?>
+<?= cr_alerts($msg, $error); ?>
 
-            <?php if ($msg): ?><div class='alert alert-success'><?= h($msg) ?></div><?php endif; ?>
-            <?php if ($error): ?><div class='alert alert-danger'><?= h($error) ?></div><?php endif; ?>
+<form method="POST" class="card">
+    <h2 class="section-title">Personal details</h2>
+    <div class="form-grid">
+        <div class="field">
+            <label for="full_name">Full name <span class="req">*</span></label>
+            <input type="text" id="full_name" name="full_name" maxlength="255" autocomplete="name" value="<?= $v('full_name') ?>" required>
+        </div>
+        <div class="field">
+            <label for="phone_number">Phone number <span class="req">*</span></label>
+            <input type="tel" id="phone_number" name="phone_number" maxlength="50" autocomplete="tel" value="<?= $v('phone_number') ?>" required>
+        </div>
+        <div class="field">
+            <label for="email">Email <span class="opt">(optional)</span></label>
+            <input type="email" id="email" name="email" maxlength="255" autocomplete="email" value="<?= $v('email') ?>">
+        </div>
+        <div class="field span-all">
+            <label for="address">Address <span class="opt">(optional)</span></label>
+            <textarea id="address" name="address" rows="2" maxlength="255"><?= $v('address') ?></textarea>
+        </div>
+    </div>
 
-            <div class="card" style="padding:20px; max-width:600px;">
-                <form method="POST">
-                    <div class="form-group">
-                        <label>Full Name:</label>
-                        <input type="text" name="full_name" class="form-control" maxlength="255" value="<?= h($customer['full_name']) ?>" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Phone Number:</label>
-                        <input type="text" name="phone_number" class="form-control" maxlength="50" value="<?= h($customer['phone_number']) ?>" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Email:</label>
-                        <input type="email" name="email" id="email" class="form-control" maxlength="255" value="<?= h($customer['email']) ?>" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>License Number:</label>
-                        <input type="text" name="license_no" class="form-control" maxlength="100" value="<?= h($customer['license_no']) ?>" required>
-                    </div>
-                    <div class="form-group"><label>License Expiry:</label><input type="date" name="license_expiry" class="form-control" value="<?= h($customer['license_expiry'] ?? '') ?>"></div>
-                    <div class="form-group"><label>ID Number:</label><input type="text" name="id_number" class="form-control" maxlength="100" value="<?= h($customer['id_number'] ?? '') ?>"></div>
-                    <div class="form-group"><label>Passport No:</label><input type="text" name="passport_no" class="form-control" maxlength="100" value="<?= h($customer['passport_no'] ?? '') ?>"></div>
-                    <div class="form-group"><label>Passport Expiry:</label><input type="date" name="passport_expiry" class="form-control" value="<?= h($customer['passport_expiry'] ?? '') ?>"></div>
-                    <div class="form-group"><label>Address:</label><textarea name="address" class="form-control" rows="3" maxlength="255"><?= h($customer['address'] ?? '') ?></textarea></div>
-
-                    <button type="submit" class="btn btn-primary mt-3">Update Customer</button>
-                    <a href="customer.php" class="btn btn-secondary mt-3">Back to List</a>
-                </form>
+    <div class="form-section">
+        <h3>Licence and identity</h3>
+        <div class="form-grid">
+            <div class="field">
+                <label for="license_no">Driver licence number <span class="req">*</span></label>
+                <input type="text" id="license_no" name="license_no" maxlength="100" value="<?= $v('license_no') ?>" required>
+            </div>
+            <div class="field">
+                <label for="license_expiry">Licence expiry</label>
+                <input type="date" id="license_expiry" name="license_expiry" value="<?= $v('license_expiry') ?>">
+            </div>
+            <div class="field">
+                <label for="id_number">ID number</label>
+                <input type="text" id="id_number" name="id_number" maxlength="100" value="<?= $v('id_number') ?>">
+            </div>
+            <div class="field">
+                <label for="passport_no">Passport number</label>
+                <input type="text" id="passport_no" name="passport_no" maxlength="100" value="<?= $v('passport_no') ?>">
+            </div>
+            <div class="field">
+                <label for="passport_expiry">Passport expiry</label>
+                <input type="date" id="passport_expiry" name="passport_expiry" value="<?= $v('passport_expiry') ?>">
             </div>
         </div>
     </div>
-</div>
-</body>
-</html>
+
+    <div class="form-actions">
+        <button type="submit"><?= cr_icon('check'); ?> Save changes</button>
+        <a class="btn btn-secondary" href="customer.php">Cancel</a>
+    </div>
+</form>
+<?php cr_layout_end(); ?>

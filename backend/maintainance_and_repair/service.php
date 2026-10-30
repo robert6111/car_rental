@@ -85,76 +85,61 @@ $allCars = $conn->query("
 ");
 
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Car Services</title>
-</head>
-<body>
+<?php cr_layout_start('Add service record'); ?>
+<a class="back-link" href="service_list.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All service records</a>
+<?= cr_page_header('Add service record', 'Record a service or maintenance job done on a car.'); ?>
 <?php
-include __DIR__ . '/../includes/header.php';
-include __DIR__ . '/../includes/leftsidebar.php';
-?>
-<div class="content-page">
-    <?php
 if (isset($_SESSION['success'])) {
-    echo "<div style='text-align:center; padding:10px; color:green; font-weight:bold;'>"
-         . h($_SESSION['success']) . "</div>";
+    echo cr_alert('success', (string)$_SESSION['success']);
     unset($_SESSION['success']);
 }
 
 if (isset($_SESSION['error'])) {
-    echo "<div style='text-align:center; padding:10px; color:red; font-weight:bold;'>"
-         . h($_SESSION['error']) . "</div>";
+    echo cr_alert('error', (string)$_SESSION['error']);
     unset($_SESSION['error']);
 }
 ?>
 
-   <h2>Add Vehicle Service / Maintenance Record</h2>
-
-<form action="service.php" method="POST">
-
-    <label>Select Car:</label><br>
-    <select name="car_id" required>
-        <option value="">-- Select Car --</option>
-
-        <?php while ($car = $allCars->fetch_assoc()) : ?>
-            <option value="<?= (int)$car['car_id'] ?>">
-                <?= h($car['make_name'] . ' ' . $car['model_name'] . ' (' . $car['reg_no'] . ')') ?>
-            </option>
-        <?php endwhile; ?>
-
-    </select>
-    <br><br>
-
-    <label>Service Type:</label><br>
-    <input type="text" name="service_type" maxlength="100" placeholder="Oil change, Tire replacement, etc" required><br><br>
-
-    <label>Description:</label><br>
-    <textarea name="description" rows="4" cols="40"></textarea><br><br>
-
-    <label>Service Date:</label><br>
-    <input type="date" name="service_date" max="<?= h(cr_today()) ?>" required><br><br>
-
-
-    <label>Mileage at Service:</label><br>
-    <input type="number" id="mileage_at_service" name="mileage_at_service" min="0" step="1"><br><br>
-
-    <label>Next Service Mileage:</label><br>
-    <input type="number" id="next_service_mileage" name="next_service_mileage" min="0" step="1"><br><br>
-
-   <label>Service Cost:</label><br>
-<input type="text" id="cost" name="cost" inputmode="decimal" placeholder="e.g. 1500 or 1.500,50"><br>
-<small>The amount is checked on the server; both 1,500.50 and 1.500,50 are accepted.</small>
-
- <br><br>
-
-    <input type="submit" value="Save Service Record">
-
+<form action="service.php" method="POST" class="card">
+    <div class="form-grid">
+        <div class="field">
+            <label for="car_id">Car <span class="req">*</span></label>
+            <select id="car_id" name="car_id" required>
+                <option value="">Select car</option>
+                <?php while ($car = $allCars->fetch_assoc()) : ?>
+                <option value="<?= (int)$car['car_id'] ?>"><?= h($car['make_name'] . ' ' . $car['model_name'] . ' (' . $car['reg_no'] . ')') ?></option>
+                <?php endwhile; ?>
+            </select>
+        </div>
+        <div class="field">
+            <label for="service_type">Service type <span class="req">*</span></label>
+            <input type="text" id="service_type" name="service_type" maxlength="100" placeholder="Oil change, tyre replacement, etc." required>
+        </div>
+        <div class="field">
+            <label for="service_date">Service date <span class="req">*</span></label>
+            <input type="date" id="service_date" name="service_date" max="<?= h(cr_today()) ?>" required>
+        </div>
+        <div class="field span-all">
+            <label for="description">Description <span class="opt">(optional)</span></label>
+            <textarea id="description" name="description" rows="3"></textarea>
+        </div>
+        <div class="field">
+            <label for="mileage_at_service">Mileage at service <span class="opt">(optional)</span></label>
+            <input type="number" id="mileage_at_service" name="mileage_at_service" min="0" step="1">
+        </div>
+        <div class="field">
+            <label for="next_service_mileage">Next service mileage <span class="opt">(optional)</span></label>
+            <input type="number" id="next_service_mileage" name="next_service_mileage" min="0" step="1">
+        </div>
+        <div class="field">
+            <label for="cost">Service cost <span class="opt">(optional)</span></label>
+            <input type="text" id="cost" name="cost" inputmode="decimal" placeholder="e.g. 1500 or 1.500,50">
+            <span class="hint">Both 1,500.50 and 1.500,50 are accepted.</span>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button type="submit"><?= cr_icon('check'); ?> Save service record</button>
+        <a class="btn btn-secondary" href="service_list.php">Cancel</a>
+    </div>
 </form>
-
-</div>
-</body>
-</html>
+<?php cr_layout_end(); ?>

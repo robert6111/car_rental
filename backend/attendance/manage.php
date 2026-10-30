@@ -40,4 +40,66 @@ $pg=cr_page();
 $pg=cr_page_count($conn,$pg,"SELECT COUNT(*) FROM attendance a JOIN users u ON a.user_id=u.id");
 $list=$conn->query("SELECT a.*,u.username FROM attendance a JOIN users u ON a.user_id=u.id ORDER BY a.work_date DESC,a.id DESC".cr_page_sql($pg));
 ?>
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Attendance & Shifts</title></head><body><?php include __DIR__.'/../includes/header.php'; include __DIR__.'/../includes/leftsidebar.php';?><div class="content-page"><h2>Attendance & Shift Tracking</h2><?php if($msg):?><p class="success-msg"><?=h($msg)?></p><?php endif;?><?php if($error):?><p class="error-msg"><?=h($error)?></p><?php endif;?><div class="card-box"><form method="POST" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;align-items:end"><div><label>User</label><select name="user_id" required><option value="">Select</option><?php while($u=$users->fetch_assoc()):?><option value="<?=h($u['id'])?>"><?=h($u['username'])?></option><?php endwhile;?></select></div><div><label>Date</label><input type="date" name="work_date" value="<?=h(cr_today())?>" max="<?=h(cr_today())?>" required></div><div><label>Shift</label><input name="shift_name" maxlength="80" placeholder="Morning / Evening"></div><div><label>Clock In</label><input type="time" name="clock_in"></div><div><label>Clock Out</label><input type="time" name="clock_out"></div><div style="grid-column:1/-1"><label>Notes</label><textarea name="notes"></textarea></div><button>Save Attendance</button></form></div><table class="table" border="1" cellpadding="10"><tr><th>Date</th><th>User</th><th>Shift</th><th>Clock In</th><th>Clock Out</th><th>Notes</th></tr><?php if($list&&$list->num_rows): while($a=$list->fetch_assoc()):?><tr><td><?= h(cr_date($a['work_date'])) ?></td><td><?=h($a['username'])?></td><td><?=h($a['shift_name'])?></td><td><?=h($a['clock_in'])?></td><td><?=h($a['clock_out'])?></td><td><?=h($a['notes'])?></td></tr><?php endwhile;else:?><tr><td colspan="6">No attendance records.</td></tr><?php endif;?></table><?= cr_pagination($pg); ?></div></body></html>
+<?php cr_layout_start('Attendance'); ?>
+<?= cr_page_header('Attendance', 'Record staff shifts and clock in / clock out times.'); ?>
+<?= cr_alerts($msg, $error); ?>
+
+<form method="POST" class="card">
+    <div class="card-head"><h2>Record attendance</h2></div>
+    <div class="form-grid">
+        <div class="field">
+            <label for="user_id">User <span class="req">*</span></label>
+            <select id="user_id" name="user_id" required><option value="">Select user</option><?php while ($u = $users->fetch_assoc()): ?><option value="<?= h($u['id']) ?>"><?= h($u['username']) ?></option><?php endwhile; ?></select>
+        </div>
+        <div class="field">
+            <label for="work_date">Date <span class="req">*</span></label>
+            <input type="date" id="work_date" name="work_date" value="<?= h(cr_today()) ?>" max="<?= h(cr_today()) ?>" required>
+        </div>
+        <div class="field">
+            <label for="shift_name">Shift <span class="opt">(optional)</span></label>
+            <input id="shift_name" name="shift_name" maxlength="80" placeholder="Morning / Evening">
+        </div>
+        <div class="field">
+            <label for="clock_in">Clock in <span class="opt">(optional)</span></label>
+            <input type="time" id="clock_in" name="clock_in">
+        </div>
+        <div class="field">
+            <label for="clock_out">Clock out <span class="opt">(optional)</span></label>
+            <input type="time" id="clock_out" name="clock_out">
+        </div>
+        <div class="field span-all">
+            <label for="notes">Notes <span class="opt">(optional)</span></label>
+            <textarea id="notes" name="notes" rows="2"></textarea>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button type="submit"><?= cr_icon('check'); ?> Save attendance</button>
+    </div>
+</form>
+
+<div class="card card-flush">
+    <div class="card-head"><h2>Attendance records</h2></div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>Date</th><th>User</th><th>Shift</th><th>Clock in</th><th>Clock out</th><th>Notes</th></tr>
+            </thead>
+            <tbody>
+            <?php if ($list && $list->num_rows): while ($a = $list->fetch_assoc()): ?>
+                <tr>
+                    <td class="nowrap"><?= h(cr_date($a['work_date'])) ?></td>
+                    <td><span class="cell-title"><?= h($a['username']) ?></span></td>
+                    <td><?= h($a['shift_name']) ?></td>
+                    <td class="nowrap"><?= h(substr((string)$a['clock_in'], 0, 5)) ?></td>
+                    <td class="nowrap"><?= h(substr((string)$a['clock_out'], 0, 5)) ?></td>
+                    <td><?= h($a['notes']) ?></td>
+                </tr>
+            <?php endwhile; else: ?>
+                <tr><td colspan="6" class="table-empty">No attendance records.</td></tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+    <?= cr_pagination($pg); ?>
+</div>
+<?php cr_layout_end(); ?>

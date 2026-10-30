@@ -62,53 +62,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     }
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Car Rental</title>
-    <link rel="stylesheet" href="<?= h(app_url('includes/css/style.css')); ?>?v=customer-ready-1">
-    <link rel="icon" type="image/png" href="<?= h(app_url('includes/images/logo.png')); ?>?v=customer-ready-1">
-</head>
-<body>
-    <div class="main-container centered-flex">
-        <div class="form-container">
-            <div class="icon fa fa-user"></div>
-
-            <form class="centered-flex" method="post" action="" autocomplete="off">
-                <div class="title">LOGIN</div>
-
-                <div class="msg">
-                    <?php if ($login_notice): ?>
-                        <p class="alert success"><?= h($login_notice); ?></p>
-                    <?php endif; ?>
-                    <?php if ($login_error): ?>
-                        <p class="alert error"><?= h($login_error); ?></p>
-                    <?php endif; ?>
-                </div>
-
-                <div class="field">
-                    <input type="email" name="email" id="email" placeholder="Email" required>
-                    <span class="fa fa-user"></span>
-                </div>
-
-                <div class="field">
-                    <input type="password" name="password" placeholder="Password" required>
-                    <span class="fa fa-lock"></span>
-                </div>
-
-                <div class="action centered-flex">
-                    <a href="forgot_password.php">Forgot Password?</a>
-                </div>
-
-                <div class="btn-container">
-                    <input type="submit" name="login" id="login-btn" value="Login">
-                </div>
-
-                <div class="signup">Accounts are created by the admin only.</div>
-            </form>
+<?php cr_auth_start('Sign in'); ?>
+<h1>Sign in</h1>
+<p class="lead">Use the email and password your administrator gave you.</p>
+<?= cr_alert('info', $login_notice) . cr_alert('error', $login_error); ?>
+<form method="post" action="" novalidate>
+    <div class="field">
+        <label for="email">Email</label>
+        <input type="email" name="email" id="email" autocomplete="username" required autofocus value="<?= h((string)($_POST['email'] ?? '')); ?>">
+    </div>
+    <div class="field">
+        <label for="password">Password</label>
+        <div class="password-wrap">
+            <input type="password" name="password" id="password" autocomplete="current-password" required>
+            <button type="button" class="password-toggle" data-password-toggle="password" aria-label="Show password"><?= cr_icon('eye'); ?></button>
         </div>
     </div>
-</body>
-</html>
+    <div class="form-actions mt-3">
+        <button type="submit" name="login" value="1" class="btn-block">Sign in</button>
+    </div>
+</form>
+<p class="auth-links"><a href="forgot_password.php">Forgot your password?</a></p>
+<?php cr_auth_end('Accounts are created by an administrator.'); ?>

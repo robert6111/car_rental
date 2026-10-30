@@ -28,4 +28,34 @@ $list=$conn->query("SELECT * FROM notifications ORDER BY FIELD(status,'Ready','D
 // "Mark Read" links stay on the current page.
 $pageQs=($pg['page']>1?'&page='.(int)$pg['page']:'').(isset($_GET['per_page'])?'&per_page='.(int)$pg['per_page']:'');
 ?>
-<!DOCTYPE html><html><head><title>Notifications & Alerts</title></head><body><?php include __DIR__.'/../includes/header.php'; include __DIR__.'/../includes/leftsidebar.php';?><div class="content-page"><h2>Notifications & Alerts</h2><p>This module prepares booking reminders, overdue alerts, maintenance/document expiry reminders and WhatsApp/SMS-ready messages.</p><?php if($msg):?><p class="success-msg"><?=h($msg)?></p><?php endif;?><a class="btn btn-primary" href="<?=h(stock_action_url('?generate=1'))?>">Generate Alerts Now</a><table class="table" border="1" cellpadding="10"><tr><th>#</th><th>Title</th><th>Message</th><th>Channel</th><th>Status</th><th>Created</th><th>Action</th></tr><?php if($list&&$list->num_rows):while($n=$list->fetch_assoc()):?><tr><td><?=h($n['id'])?></td><td><?=h($n['title'])?></td><td><?=h($n['message'])?></td><td><?=h($n['channel'])?></td><td><?=h($n['status'])?></td><td><?= h(cr_date($n['created_at'])) ?></td><td><?php if($n['status']!=='Read'):?><a class="btn btn-success" href="<?=h(stock_action_url('?read=' . (int)$n['id'] . $pageQs))?>">Mark Read</a><?php endif;?></td></tr><?php endwhile;else:?><tr><td colspan="7">No notifications yet.</td></tr><?php endif;?></table><?= cr_pagination($pg); ?></div></body></html>
+<?php cr_layout_start('Notifications'); ?>
+<?= cr_page_header('Notifications', 'Booking reminders, overdue alerts, maintenance and document expiry reminders, and WhatsApp/SMS-ready messages.', '<a class="btn" href="' . h(stock_action_url('?generate=1')) . '">' . cr_icon('refresh') . ' Generate alerts now</a>'); ?>
+<?= cr_alert('success', $msg); ?>
+
+<div class="card card-flush">
+    <div class="card-head"><h2>All notifications</h2></div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>#</th><th>Title</th><th>Message</th><th>Channel</th><th>Status</th><th>Created</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+            <?php if ($list && $list->num_rows): while ($n = $list->fetch_assoc()): ?>
+                <tr>
+                    <td><?= h($n['id']) ?></td>
+                    <td><span class="cell-title"><?= h($n['title']) ?></span></td>
+                    <td><?= h($n['message']) ?></td>
+                    <td><?= h($n['channel']) ?></td>
+                    <td><?= cr_status_badge((string)$n['status']) ?></td>
+                    <td class="nowrap"><?= h(cr_date($n['created_at'])) ?></td>
+                    <td class="actions-cell"><?php if ($n['status'] !== 'Read'): ?><a class="btn btn-sm btn-secondary" href="<?= h(stock_action_url('?read=' . (int)$n['id'] . $pageQs)) ?>"><?= cr_icon('check', 'icon-sm'); ?> Mark read</a><?php endif; ?></td>
+                </tr>
+            <?php endwhile; else: ?>
+                <tr><td colspan="7" class="table-empty">No notifications yet.</td></tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+    <?= cr_pagination($pg); ?>
+</div>
+<?php cr_layout_end(); ?>

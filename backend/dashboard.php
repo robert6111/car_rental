@@ -22,498 +22,236 @@ function count_rows(mysqli $conn, string $sql): int {
     return (int)($row[0] ?? 0);
 }
 
-$totalCars      = count_rows($conn, "SELECT COUNT(*) FROM cars");
-$availableCars  = count_rows($conn, "SELECT COUNT(*) FROM cars WHERE availability_status = 'Available'");
-$rentedCars     = count_rows($conn, "SELECT COUNT(*) FROM cars WHERE availability_status = 'Rented'");
-$notReturnedCars = count_rows($conn, "SELECT COUNT(*) FROM cars WHERE availability_status = 'Not Returned'");
-$totalCustomers = count_rows($conn, "SELECT COUNT(*) FROM customers");
-$totalRentals   = count_rows($conn, "SELECT COUNT(*) FROM rentals WHERE status <> 'Deleted'");
-$totalPayments  = count_rows($conn, "SELECT COUNT(*) FROM payment p JOIN rentals r ON r.id = p.rental_id WHERE r.status <> 'Deleted'");
-$totalUsers     = count_rows($conn, "SELECT COUNT(*) FROM users");
-// Same-day rentals whose car has not been confirmed as returned yet.
-$sameDayToConfirm = count_rows($conn, "SELECT COUNT(*) FROM rentals WHERE status IN ('Active','Completed') AND returned_at IS NULL AND start_date=end_date AND end_date <= CURDATE()");
-$totalReservations = count_rows($conn, "SELECT COUNT(*) FROM reservations WHERE status IN ('Pending','Confirmed','Waitlisted')");
-$totalAlerts = count_rows($conn, "SELECT COUNT(*) FROM notifications WHERE status='Ready'");
-$openTasks = count_rows($conn, "SELECT COUNT(*) FROM staff_tasks WHERE status IN ('Open','In Progress')");
-$openCases = count_rows($conn, "SELECT COUNT(*) FROM not_returned_cases WHERE status IN ('Open','Followed Up','Reported')");
+$canRentals  = stock_has_permission('rentals_manage');
+$canPayments = stock_has_permission('payments_manage') || stock_has_permission('reports_view');
+$canOffice   = stock_has_permission('office_manage');
 
-$recentRentals = $conn->query("
+// Fleet by status (one query instead of one per status).
+$fleet = ['Available' => 0, 'Rented' => 0, 'Reserved' => 0, 'Maintenance' => 0, 'Not Returned' => 0];
+$res = $conn->query("SELECT availability_status AS s, COUNT(*) AS n FROM cars GROUP BY availability_status");
+while ($res && $row = $res->fetch_assoc()) {
+    $fleet[$row['s']] = ($fleet[$row['s']] ?? 0) + (int)$row['n'];
+}
+$totalCars = array_sum($fleet);
+
+$totalCustomers    = count_rows($conn, "SELECT COUNT(*) FROM customers");
+$activeRentals     = count_rows($conn, "SELECT COUNT(*) FROM rentals WHERE status = 'Active'");
+$totalReservations = count_rows($conn, "SELECT COUNT(*) FROM reservations WHERE status IN ('Pending','Confirmed','Waitlisted')");
+$unlinkedRequests  = count_rows($conn, "SELECT COUNT(*) FROM reservations WHERE source = 'Online' AND customer_id IS NULL AND status IN ('Pending','Waitlisted','Confirmed')");
+$totalAlerts       = count_rows($conn, "SELECT COUNT(*) FROM notifications WHERE status = 'Ready'");
+$openTasks         = count_rows($conn, "SELECT COUNT(*) FROM staff_tasks WHERE status IN ('Open','In Progress')");
+$openCases         = count_rows($conn, "SELECT COUNT(*) FROM not_returned_cases WHERE status IN ('Open','Followed Up','Reported')");
+// Same-day rentals whose car has not been confirmed as returned yet.
+$sameDayToConfirm  = count_rows($conn, "SELECT COUNT(*) FROM rentals WHERE status IN ('Active','Completed') AND returned_at IS NULL AND start_date = end_date AND end_date <= CURDATE()");
+
+// Today: cars going out and cars due back.
+$today = cr_today();
+$todayList = function (string $where) use ($conn): array {
+    $sql = "SELECT r.id, r.start_date, r.end_date, r.status, r.returned_at, c.full_name, ca.reg_no
+            FROM rentals r LEFT JOIN customers c ON c.id = r.customer_id LEFT JOIN cars ca ON ca.id = r.cars_id
+            WHERE $where ORDER BY r.id LIMIT 8";
+    $res = $conn->query($sql);
+    return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+};
+$goingOut = $todayList("r.start_date = CURDATE() AND r.status IN ('Pending','Active')");
+$dueBack  = $todayList("r.returned_at IS NULL AND r.status IN ('Active','Completed') AND r.end_date <= CURDATE()");
+
+// Last 6 months: rentals started and money received (two separate charts, never one dual-axis chart).
+$months = [];
+for ($i = 5; $i >= 0; $i--) {
+    $key = date('Y-m', strtotime(date('Y-m-01', strtotime($today)) . " -$i months"));
+    $months[$key] = ['rentals' => 0, 'paid' => 0.0];
+}
+$from = array_key_first($months) . '-01';
+$stmt = $conn->prepare("SELECT DATE_FORMAT(start_date, '%Y-%m') AS ym, COUNT(*) AS n FROM rentals WHERE start_date >= ? AND status NOT IN ('Canceled','Deleted') GROUP BY ym");
+$stmt->bind_param('s', $from);
+$stmt->execute();
+foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $row) {
+    if (isset($months[$row['ym']])) $months[$row['ym']]['rentals'] = (int)$row['n'];
+}
+$stmt->close();
+if ($canPayments) {
+    $stmt = $conn->prepare("SELECT DATE_FORMAT(p.payment_date, '%Y-%m') AS ym, SUM(p.amount) AS total FROM payment p JOIN rentals r ON r.id = p.rental_id WHERE p.payment_date >= ? AND r.status <> 'Deleted' GROUP BY ym");
+    $stmt->bind_param('s', $from);
+    $stmt->execute();
+    foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $row) {
+        if (isset($months[$row['ym']])) $months[$row['ym']]['paid'] = (float)$row['total'];
+    }
+    $stmt->close();
+}
+
+$recentRentals = $canRentals ? $conn->query("
     SELECT r.*, c.full_name AS customer_name, ca.reg_no AS car_reg
     FROM rentals r
     LEFT JOIN customers c ON r.customer_id = c.id
     LEFT JOIN cars ca ON r.cars_id = ca.id
     WHERE r.status <> 'Deleted'
     ORDER BY r.id DESC
-    LIMIT 5
-");
+    LIMIT 6
+") : false;
+
+/** Status shown for a rental: a finished rental whose car is still out reads "Not returned". */
+function dashboard_rental_status(array $r): string {
+    if (in_array($r['status'], ['Active', 'Completed'], true) && empty($r['returned_at']) && $r['end_date'] < cr_today()) return 'Not returned';
+    return (string)$r['status'];
+}
+
+/** Single-series bar chart (CSS only). $values: label => number. Latest value is labelled; others show on hover. */
+function dashboard_bar_chart(array $values, callable $format, string $caption): string {
+    if (array_sum($values) <= 0) {
+        return '<div class="empty-state">' . cr_icon('chart') . '<p class="mb-0">Nothing recorded in the last 6 months yet.</p></div>';
+    }
+    $max = max(1, max($values));
+    $html = '<figure class="mb-0"><div class="bar-chart" style="--bars:' . count($values) . '" role="img" aria-label="' . h($caption) . '">';
+    $keys = array_keys($values);
+    $last = end($keys);
+    foreach ($values as $label => $v) {
+        $pct = $v > 0 ? max(2, round($v / $max * 100, 1)) : 0;
+        $text = $format($v);
+        $html .= '<div class="bar-col" title="' . h($label . ': ' . $text) . '">'
+            . '<span class="bar-value' . ($label === $last ? '' : ' on-hover') . '">' . h($text) . '</span>'
+            . '<div class="bar" style="height:' . $pct . '%"></div>'
+            . '<span class="bar-label">' . h($label) . '</span></div>';
+    }
+    return $html . '</div></figure>';
+}
+
+$monthLabel = fn(string $ym) => date('M', strtotime($ym . '-01'));
+$rentalSeries = [];
+$paidSeries = [];
+foreach ($months as $ym => $m) {
+    $rentalSeries[$monthLabel($ym)] = $m['rentals'];
+    $paidSeries[$monthLabel($ym)] = $m['paid'];
+}
+
+$fleetTones = ['Available' => 'success', 'Rented' => 'info', 'Reserved' => 'purple', 'Maintenance' => 'warning', 'Not Returned' => 'danger'];
+
+$headActions = '';
+if ($canRentals) $headActions .= '<a class="btn" href="' . h(app_url('rentals/add.php')) . '">' . cr_icon('plus') . ' New rental</a>';
+$headActions .= '<a class="btn btn-secondary" href="' . h(app_url('cars/cars_inventory.php')) . '">' . cr_icon('car') . ' Available cars</a>';
+
+cr_layout_start('Dashboard', ['head' => '<style>
+.bar-value.on-hover{visibility:hidden}.bar-col:hover .bar-value.on-hover{visibility:visible}
+.bar-col:hover .bar{filter:brightness(1.12)}
+.fleet-bar > span.t-success{background:var(--success)}.fleet-bar > span.t-info{background:var(--info)}.fleet-bar > span.t-purple{background:var(--purple)}.fleet-bar > span.t-warning{background:var(--warning)}.fleet-bar > span.t-danger{background:var(--danger)}
+.legend i.t-success{background:var(--success)}.legend i.t-info{background:var(--info)}.legend i.t-purple{background:var(--purple)}.legend i.t-warning{background:var(--warning)}.legend i.t-danger{background:var(--danger)}
+.today-list{list-style:none;margin:0;padding:0}.today-list li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:14px}.today-list li:last-child{border-bottom:0}
+.fleet-total{font-size:2rem;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+</style>']);
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Car Rental</title>
 
-    <style>
-        .clean-dashboard {
-            background: #f5f6f8;
-            min-height: 100vh;
-            color: #1f2933;
-        }
-
-        .dashboard-head {
-            margin-bottom: 22px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .dashboard-head h1 {
-            margin: 0;
-            font-size: 26px;
-            font-weight: 700;
-            color: #1f2933;
-        }
-
-        .dashboard-head p {
-            margin: 5px 0 0;
-            font-size: 14px;
-            color: #6b7280;
-        }
-
-        .dashboard-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .dash-btn {
-            display: inline-block;
-            padding: 9px 15px;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
-            text-decoration: none;
-            border: 1px solid #d1d5db;
-            color: #374151;
-            background: #ffffff;
-        }
-
-        .dash-btn.primary {
-            background: #1f4e79;
-            border-color: #1f4e79;
-            color: #ffffff;
-        }
-
-        .dash-btn:hover {
-            opacity: 0.9;
-            text-decoration: none;
-        }
-
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 14px;
-            margin-bottom: 22px;
-        }
-
-        .summary-card {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 18px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.035);
-        }
-
-        .summary-card .line {
-            width: 35px;
-            height: 3px;
-            background: #1f4e79;
-            border-radius: 10px;
-            margin-bottom: 14px;
-        }
-
-        .summary-card.green .line {
-            background: #2e7d32;
-        }
-
-        .summary-card.orange .line {
-            background: #b45309;
-        }
-
-        .summary-card.purple .line {
-            background: #5b4b8a;
-        }
-
-        .summary-card.red .line {
-            background: #9f1239;
-        }
-
-        .summary-card.gray .line {
-            background: #4b5563;
-        }
-
-        .summary-card p {
-            margin: 0;
-            color: #6b7280;
-            font-size: 13px;
-            font-weight: 600;
-        }
-
-        .summary-card h2 {
-            margin: 8px 0 0;
-            color: #111827;
-            font-size: 22px;
-            font-weight: 700;
-        }
-
-        .dashboard-card {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.035);
-        }
-
-        .card-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 16px;
-        }
-
-        .card-head h2 {
-            margin: 0;
-            font-size: 18px;
-            color: #1f2933;
-            font-weight: 700;
-        }
-
-        .professional-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .professional-table th {
-            text-align: left;
-            padding: 12px 10px;
-            font-size: 12px;
-            color: #6b7280;
-            font-weight: 700;
-            border-bottom: 1px solid #e5e7eb;
-            background: #f9fafb;
-            white-space: nowrap;
-        }
-
-        .professional-table td {
-            padding: 13px 10px;
-            font-size: 14px;
-            color: #374151;
-            border-bottom: 1px solid #eef0f3;
-            vertical-align: middle;
-        }
-
-        .professional-table tbody tr:hover {
-            background: #fafafa;
-        }
-
-        .customer-title {
-            font-weight: 700;
-            color: #111827;
-        }
-
-        .plate-number {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 5px;
-            background: #f3f4f6;
-            border: 1px solid #e5e7eb;
-            font-size: 12px;
-            font-weight: 700;
-            color: #374151;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 5px 9px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 700;
-        }
-
-        .status-badge.active {
-            background: #ecfdf3;
-            color: #166534;
-        }
-
-        .status-badge.completed {
-            background: #eff6ff;
-            color: #1d4ed8;
-        }
-
-        .status-badge.cancelled {
-            background: #fef2f2;
-            color: #991b1b;
-        }
-
-        .status-badge.pending {
-            background: #fff7ed;
-            color: #9a3412;
-        }
-
-        .status-badge.default {
-            background: #f3f4f6;
-            color: #374151;
-        }
-
-        .empty-message {
-            text-align: center;
-            color: #6b7280;
-            padding: 22px !important;
-        }
-
-        @media screen and (max-width: 1200px) {
-            .summary-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media screen and (max-width: 700px) {
-            .dashboard-head {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .dashboard-actions {
-                width: 100%;
-            }
-
-            .dash-btn {
-                flex: 1;
-                text-align: center;
-            }
-
-            .summary-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .dashboard-card {
-                padding: 15px;
-            }
-
-            .card-head {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-        }
-    </style>
-</head>
-
-<body>
-<?php include __DIR__ . '/includes/header.php'; ?>
-<?php include __DIR__ . '/includes/leftsidebar.php'; ?>
-
-<div class="content-page clean-dashboard">
-    <div class="content">
-        <div class="container-fluid">
-
-            <?php if (stock_has_permission('settings_manage') && cr_setting('settings_reviewed') !== '1'): ?>
-                <div style="background:#fff7ed;border:1px solid #fdba74;color:#9a3412;padding:12px 16px;border-radius:10px;margin-bottom:16px;">
-                    <strong>Finish setting up your system.</strong> Check the business name, currency, timezone and phone code in
-                    <a href="<?= h(app_url('settings/index.php')); ?>" style="color:#9a3412;text-decoration:underline;">Settings</a>.
-                    This message disappears after you save them.
-                </div>
-            <?php endif; ?>
-            <?php if (stock_has_permission('settings_manage') && !$scheduledTaskRunning): ?>
-                <div style="background:#eff6ff;border:1px solid #93c5fd;color:#1e3a8a;padding:12px 16px;border-radius:10px;margin-bottom:16px;">
-                    <strong>The scheduled task is not set up.</strong> Daily backups currently run when someone opens this dashboard.
-                    Set up <code>cron/run-scheduled.bat</code> (Windows) or <code>cron/run.php</code> (Linux) to run every hour, as described in <code>backend/database/INSTALLATION_NOTES.txt</code>.
-                </div>
-            <?php endif; ?>
-
-            <div class="dashboard-head">
-                <div>
-                    <h1>Dashboard</h1>
-                    <p>Cars, rentals, customers, payments, alerts, and operational follow-ups.</p>
-                </div>
-
-                <div class="dashboard-actions">
-                    <a class="dash-btn primary" href="<?= h(app_url('rentals/manage.php')); ?>">Manage Rentals</a>
-                    <a class="dash-btn" href="<?= h(app_url('cars/cars_inventory.php')); ?>">Manage Cars</a>
-                </div>
-            </div>
-
-            <div class="summary-grid">
-                <div class="summary-card">
-                    <div class="line"></div>
-                    <p>Total Cars</p>
-                    <h2><?= h($totalCars); ?></h2>
-                </div>
-
-                <div class="summary-card green">
-                    <div class="line"></div>
-                    <p>Available Cars</p>
-                    <h2><?= h($availableCars); ?></h2>
-                </div>
-
-                <div class="summary-card orange">
-                    <div class="line"></div>
-                    <p>Rented Cars</p>
-                    <h2><?= h($rentedCars); ?></h2>
-                </div>
-
-                <div class="summary-card red">
-                    <div class="line"></div>
-                    <p>Not Returned Cars</p>
-                    <h2><?= h($notReturnedCars); ?></h2>
-                </div>
-
-                <div class="summary-card purple">
-                    <div class="line"></div>
-                    <p>Total Customers</p>
-                    <h2><?= h($totalCustomers); ?></h2>
-                </div>
-
-                <div class="summary-card gray">
-                    <div class="line"></div>
-                    <p>Total Rentals</p>
-                    <h2><?= h($totalRentals); ?></h2>
-                </div>
-
-                <div class="summary-card">
-                    <div class="line"></div>
-                    <p>Total Payments</p>
-                    <h2><?= h($totalPayments); ?></h2>
-                </div>
-
-                <div class="summary-card purple">
-                    <div class="line"></div>
-                    <p>Reservations / Waitlist</p>
-                    <h2><?= h($totalReservations); ?></h2>
-                </div>
-
-                <div class="summary-card orange">
-                    <div class="line"></div>
-                    <p>Ready Alerts</p>
-                    <h2><?= h($totalAlerts); ?></h2>
-                </div>
-
-                <div class="summary-card gray">
-                    <div class="line"></div>
-                    <p>Open Tasks</p>
-                    <h2><?= h($openTasks); ?></h2>
-                </div>
-
-                <div class="summary-card red">
-                    <div class="line"></div>
-                    <p>Not Returned Cases</p>
-                    <h2><?= h($openCases); ?></h2>
-                </div>
-
-                <?php if ($sameDayToConfirm > 0): ?>
-                    <div class="summary-card red">
-                        <div class="line"></div>
-                        <p>Same-Day Returns To Confirm</p>
-                        <h2><?= h($sameDayToConfirm); ?></h2>
-                    </div>
-                <?php endif; ?>
-
-                <?php if (is_admin_user()): ?>
-                    <div class="summary-card gray">
-                        <div class="line"></div>
-                        <p>Total Users</p>
-                        <h2><?= h($totalUsers); ?></h2>
-                    </div>
-                <?php endif; ?>
-            </div>
-
-            <div class="dashboard-card">
-                <div class="card-head">
-                    <h2>Recent Rentals</h2>
-                    <a class="dash-btn" href="<?= h(app_url('rentals/manage.php')); ?>">View All Rentals</a>
-                </div>
-
-                <div class="table-responsive">
-                    <table class="professional-table">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Customer</th>
-                                <th>Car</th>
-                                <th>Start Date</th>
-                                <th>End Date</th>
-                                <th>Cost</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            <?php if ($recentRentals && $recentRentals->num_rows > 0): $i = 1; ?>
-                                <?php while ($rental = $recentRentals->fetch_assoc()): ?>
-                                    <?php
-                                        $statusText = $rental['status'] ?? 'N/A';
-                                        $statusLower = strtolower($statusText);
-
-                                        if ($statusText === 'Completed' && empty($rental['returned_at']) && $rental['end_date'] < cr_today()) {
-                                            $statusText = 'Not returned';
-                                            $statusClass = 'cancelled';
-                                        } elseif ($statusLower === 'active') {
-                                            $statusClass = 'active';
-                                        } elseif ($statusLower === 'completed') {
-                                            $statusClass = 'completed';
-                                        } elseif ($statusLower === 'cancelled' || $statusLower === 'canceled') {
-                                            $statusClass = 'cancelled';
-                                        } elseif ($statusLower === 'pending') {
-                                            $statusClass = 'pending';
-                                        } else {
-                                            $statusClass = 'default';
-                                        }
-                                    ?>
-
-                                    <tr>
-                                        <td><?= $i++; ?></td>
-
-                                        <td>
-                                            <span class="customer-title">
-                                                <?= h($rental['customer_name'] ?? 'N/A'); ?>
-                                            </span>
-                                        </td>
-
-                                        <td>
-                                            <span class="plate-number">
-                                                <?= h($rental['car_reg'] ?? 'N/A'); ?>
-                                            </span>
-                                        </td>
-
-                                        <td><?= h(cr_date($rental['start_date'])) ?></td>
-
-                                        <td><?= h(cr_date($rental['end_date'])) ?></td>
-
-                                        <td><?= money((float)$rental['total_cost']); ?></td>
-
-                                        <td>
-                                            <span class="status-badge <?= h($statusClass); ?>">
-                                                <?= h($statusText); ?>
-                                            </span>
-                                        </td>
-                                    </tr>
-                                <?php endwhile; ?>
-                            <?php else: ?>
-                                <tr>
-                                    <td colspan="7" class="empty-message">No recent rentals yet.</td>
-                                </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-        </div>
-    </div>
+<?php if (stock_has_permission('settings_manage') && cr_setting('settings_reviewed') !== '1'): ?>
+    <?= cr_alert('warning', '<strong>Finish setting up your system.</strong> Check the business name, currency, timezone and phone code in <a href="' . h(app_url('settings/index.php')) . '">Settings</a>. This message disappears after you save them.', true); ?>
+<?php endif; ?>
+<?php if (stock_has_permission('settings_manage') && !$scheduledTaskRunning): ?>
+    <?= cr_alert('info', '<strong>The scheduled task is not set up.</strong> Daily backups currently run when someone opens this dashboard. Set up <code>cron/run-scheduled.bat</code> (Windows) or <code>cron/run.php</code> (Linux) to run every hour, as described in <code>backend/database/INSTALLATION_NOTES.txt</code>.', true); ?>
+<?php endif; ?>
+<?php if ($canRentals && $unlinkedRequests > 0): ?>
+    <?= cr_alert('info', '<strong>' . $unlinkedRequests . ' online booking request' . ($unlinkedRequests === 1 ? '' : 's') . '</strong> waiting to be linked to a customer. <a href="' . h(app_url('reservations/manage.php')) . '">Open reservations</a>', true); ?>
+<?php endif; ?>
+
+<?= cr_page_header('Dashboard', cr_company_name() . ' · ' . cr_date($today), $headActions); ?>
+
+<div class="stats">
+    <a class="stat tone-success" href="<?= h(app_url('cars/cars_inventory.php')); ?>"><div class="stat-icon"><?= cr_icon('car'); ?></div><div><div class="stat-label">Cars available</div><div class="stat-value"><?= cr_number($fleet['Available'], 0); ?></div></div></a>
+    <?php if ($canRentals): ?>
+    <a class="stat" href="<?= h(app_url('rentals/active.php')); ?>"><div class="stat-icon"><?= cr_icon('calendar'); ?></div><div><div class="stat-label">Active rentals</div><div class="stat-value"><?= cr_number($activeRentals, 0); ?></div></div></a>
+    <a class="stat <?= $fleet['Not Returned'] > 0 ? 'tone-danger' : 'tone-neutral'; ?>" href="<?= h(app_url('rentals/not_returned.php')); ?>"><div class="stat-icon"><?= cr_icon('alert'); ?></div><div><div class="stat-label">Cars not returned</div><div class="stat-value"><?= cr_number($fleet['Not Returned'], 0); ?></div></div></a>
+    <a class="stat tone-purple" href="<?= h(app_url('reservations/manage.php')); ?>"><div class="stat-icon"><?= cr_icon('calendar-check'); ?></div><div><div class="stat-label">Open reservations</div><div class="stat-value"><?= cr_number($totalReservations, 0); ?></div></div></a>
+    <?php endif; ?>
+    <?php if (stock_has_permission('customers_manage')): ?>
+    <a class="stat tone-neutral" href="<?= h(app_url('customers/customer.php')); ?>"><div class="stat-icon"><?= cr_icon('users'); ?></div><div><div class="stat-label">Customers</div><div class="stat-value"><?= cr_number($totalCustomers, 0); ?></div></div></a>
+    <?php endif; ?>
+    <?php if ($canOffice): ?>
+    <a class="stat <?= $openCases > 0 ? 'tone-danger' : 'tone-neutral'; ?>" href="<?= h(app_url('rentals/not_returned.php')); ?>"><div class="stat-icon"><?= cr_icon('shield'); ?></div><div><div class="stat-label">Open not-returned cases</div><div class="stat-value"><?= cr_number($openCases, 0); ?></div></div></a>
+    <a class="stat tone-warning" href="<?= h(app_url('tasks/manage.php')); ?>"><div class="stat-icon"><?= cr_icon('clipboard'); ?></div><div><div class="stat-label">Open tasks</div><div class="stat-value"><?= cr_number($openTasks, 0); ?></div></div></a>
+    <a class="stat tone-warning" href="<?= h(app_url('notifications/alerts.php')); ?>"><div class="stat-icon"><?= cr_icon('bell'); ?></div><div><div class="stat-label">Alerts ready to send</div><div class="stat-value"><?= cr_number($totalAlerts, 0); ?></div></div></a>
+    <?php endif; ?>
+    <?php if ($canRentals && $sameDayToConfirm > 0): ?>
+    <a class="stat tone-danger" href="<?= h(app_url('rentals/manage.php')); ?>"><div class="stat-icon"><?= cr_icon('clock'); ?></div><div><div class="stat-label">Same-day returns to confirm</div><div class="stat-value"><?= cr_number($sameDayToConfirm, 0); ?></div></div></a>
+    <?php endif; ?>
 </div>
 
-<?php include __DIR__ . '/includes/footer.php'; ?>
-</body>
-</html>
+<div class="grid grid-2 mb-4">
+    <section class="card">
+        <div class="card-head"><h2>Fleet status</h2><span class="muted"><?= cr_number($totalCars, 0); ?> <?= $totalCars === 1 ? 'car' : 'cars'; ?></span></div>
+        <?php if ($totalCars > 0): ?>
+            <div class="split-bar fleet-bar" role="img" aria-label="Fleet by status">
+                <?php foreach ($fleet as $status => $n): if ($n <= 0) continue; ?>
+                    <span class="t-<?= $fleetTones[$status] ?? 'info'; ?>" style="width:<?= round($n / $totalCars * 100, 2); ?>%" title="<?= h($status . ': ' . $n); ?>"></span>
+                <?php endforeach; ?>
+            </div>
+            <div class="legend">
+                <?php foreach ($fleet as $status => $n): ?>
+                    <span><i class="t-<?= $fleetTones[$status] ?? 'info'; ?>"></i><?= h($status === 'Not Returned' ? 'Not returned' : $status); ?> <b><?= cr_number($n, 0); ?></b></span>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <div class="empty-state"><?= cr_icon('car'); ?><p class="mb-0">No cars yet. <?php if (stock_has_permission('cars_manage')): ?><a href="<?= h(app_url('cars/add.php')); ?>">Add your first car</a>.<?php endif; ?></p></div>
+        <?php endif; ?>
+    </section>
+
+    <?php if ($canRentals): ?>
+    <section class="card">
+        <div class="card-head"><h2>Today</h2><span class="muted"><?= h(cr_date($today)); ?></span></div>
+        <div class="grid grid-2">
+            <div>
+                <h3 class="section-title">Going out (<?= count($goingOut); ?>)</h3>
+                <?php if ($goingOut): ?><ul class="today-list"><?php foreach ($goingOut as $r): ?>
+                    <li><span><span class="cell-title"><?= h($r['full_name'] ?? 'N/A'); ?></span><span class="cell-sub">Rental #<?= (int)$r['id']; ?></span></span><span class="plate"><?= h($r['reg_no'] ?? '-'); ?></span></li>
+                <?php endforeach; ?></ul><?php else: ?><p class="muted mb-0">No pickups today.</p><?php endif; ?>
+            </div>
+            <div>
+                <h3 class="section-title">Due back (<?= count($dueBack); ?>)</h3>
+                <?php if ($dueBack): ?><ul class="today-list"><?php foreach ($dueBack as $r): $late = $r['end_date'] < $today; ?>
+                    <li><span><span class="cell-title"><?= h($r['full_name'] ?? 'N/A'); ?></span><span class="cell-sub"><?= $late ? '<span class="text-danger">Overdue since ' . h(cr_date($r['end_date'])) . '</span>' : 'Due today'; ?></span></span><span class="plate"><?= h($r['reg_no'] ?? '-'); ?></span></li>
+                <?php endforeach; ?></ul><?php else: ?><p class="muted mb-0">Nothing due back.</p><?php endif; ?>
+            </div>
+        </div>
+        <?php if ($dueBack): ?><div class="mt-3"><a href="<?= h(app_url('rentals/manage.php')); ?>">Confirm returns in All rentals &rarr;</a></div><?php endif; ?>
+    </section>
+    <?php endif; ?>
+</div>
+
+<div class="grid <?= $canPayments ? 'grid-2' : ''; ?> mb-4">
+    <section class="card">
+        <div class="card-head"><h2>Rentals started</h2><span class="muted">Last 6 months</span></div>
+        <?= dashboard_bar_chart($rentalSeries, fn($v) => cr_number($v, 0), 'Rentals started per month, last 6 months'); ?>
+    </section>
+    <?php if ($canPayments): ?>
+    <section class="card">
+        <div class="card-head"><h2>Payments received</h2><span class="muted">Last 6 months</span></div>
+        <?= dashboard_bar_chart($paidSeries, fn($v) => money_text($v), 'Payments received per month, last 6 months'); ?>
+    </section>
+    <?php endif; ?>
+</div>
+
+<?php if ($canRentals): ?>
+<section class="card card-flush">
+    <div class="card-head"><h2>Recent rentals</h2><a class="btn btn-secondary btn-sm" href="<?= h(app_url('rentals/manage.php')); ?>">View all</a></div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>#</th><th>Customer</th><th>Car</th><th>Start</th><th>End</th><th class="num">Cost</th><th>Status</th></tr></thead>
+            <tbody>
+            <?php if ($recentRentals && $recentRentals->num_rows > 0): ?>
+                <?php while ($rental = $recentRentals->fetch_assoc()): $st = dashboard_rental_status($rental); ?>
+                    <tr>
+                        <td class="muted"><?= (int)$rental['id']; ?></td>
+                        <td><span class="cell-title"><?= h($rental['customer_name'] ?? 'N/A'); ?></span></td>
+                        <td><span class="plate"><?= h($rental['car_reg'] ?? 'N/A'); ?></span></td>
+                        <td class="nowrap"><?= h(cr_date($rental['start_date'])); ?></td>
+                        <td class="nowrap"><?= h(cr_date($rental['end_date'])); ?></td>
+                        <td class="num"><?= money((float)$rental['total_cost']); ?></td>
+                        <td><?= cr_status_badge($st); ?></td>
+                    </tr>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <tr><td colspan="7" class="table-empty">No rentals yet.</td></tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</section>
+<?php endif; ?>
+
+<?php cr_layout_end(); ?>

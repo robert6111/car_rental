@@ -62,18 +62,61 @@ $stmt->execute();
 $result = $stmt->get_result();
 $stmt->close();
 ?>
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Payment Report</title></head>
-<body><?php include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/leftsidebar.php'; ?>
-<div class="content-page"><div class="card-box"><h2>Payment Report</h2><br>
-<form method="GET" style="margin-bottom:20px; display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
-<div><label>From:</label><br><input type="date" name="from_date" value="<?= h($from_date); ?>"></div>
-<div><label>To:</label><br><input type="date" name="to_date" value="<?= h($to_date); ?>"></div>
-<div><label>Reg No / Customer:</label><br><input type="text" name="reg_no" value="<?= h($reg_no); ?>" placeholder="Example: 34 ABC 123"></div>
-<div><button type="submit" class="btn btn-primary">Apply Filters</button>
-<a href="payment_report_export.php?from_date=<?= urlencode($from_date); ?>&to_date=<?= urlencode($to_date); ?>&reg_no=<?= urlencode($reg_no); ?>" class="btn btn-danger" target="_blank">Download PDF</a></div>
-</form>
-<div class="table-responsive"><table class="table" border="1" cellpadding="10"><tr><th>#</th><th>Date</th><th>Customer</th><th>Car</th><th>Reg No</th><th>Rental</th><th>Amount</th></tr>
-<?php if($result && $result->num_rows): $i=$pg['offset']+1; while($row=$result->fetch_assoc()): $carName = trim(($row['make_name'] ?? '') . ' ' . ($row['model_name'] ?? '') . ' ' . ($row['car_year'] ?? '')); ?>
-<tr><td><?= $i++; ?></td><td><?= h(cr_date($row['payment_date'])) ?></td><td><?= h($row['full_name']); ?></td><td><?= h($carName !== '' ? $carName : $row['reg_no']); ?></td><td><?= h($row['reg_no']); ?></td><td>#<?= h($row['rental_id']); ?></td><td><?= money((float)$row['amount']); ?></td></tr>
-<?php endwhile; ?><tr><th colspan="6">Total (<?= $paymentCount; ?> payment<?= $paymentCount === 1 ? '' : 's'; ?>)</th><th><?= money($total); ?></th></tr><?php else: ?><tr><td colspan="7">No payment records found.</td></tr><?php endif; ?>
-</table></div><?= cr_pagination($pg); ?></div></div></body></html>
+<?php
+$rows = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+$pdfUrl = 'payment_report_export.php?from_date=' . urlencode($from_date) . '&to_date=' . urlencode($to_date) . '&reg_no=' . urlencode($reg_no);
+cr_layout_start('Payment report');
+?>
+<?= cr_page_header('Payment report', 'Payments received in a period, with their total.', '<a class="btn btn-secondary" href="' . h($pdfUrl) . '" target="_blank">' . cr_icon('download') . ' Download PDF</a>'); ?>
+
+<div class="card">
+    <form method="GET" class="filters mb-0">
+        <div class="field">
+            <label for="from_date">From</label>
+            <input type="date" id="from_date" name="from_date" value="<?= h($from_date); ?>">
+        </div>
+        <div class="field">
+            <label for="to_date">To</label>
+            <input type="date" id="to_date" name="to_date" value="<?= h($to_date); ?>">
+        </div>
+        <div class="field grow">
+            <label for="reg_no">Reg no or customer</label>
+            <input type="text" id="reg_no" name="reg_no" value="<?= h($reg_no); ?>" placeholder="Example: 34 ABC 123">
+        </div>
+        <button type="submit"><?= cr_icon('search'); ?> Filter</button>
+        <a class="btn btn-secondary" href="payment_report.php">Clear</a>
+    </form>
+</div>
+
+<div class="stats">
+    <div class="stat"><div class="stat-icon"><?= cr_icon('receipt'); ?></div><div><div class="stat-label">Payments</div><div class="stat-value"><?= (int)$paymentCount; ?></div></div></div>
+    <div class="stat tone-success"><div class="stat-icon"><?= cr_icon('wallet'); ?></div><div><div class="stat-label">Total received</div><div class="stat-value"><?= money($total); ?></div></div></div>
+</div>
+
+<div class="card card-flush">
+    <div class="card-head"><h2>Payments</h2></div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>#</th><th>Date</th><th>Customer</th><th>Car</th><th>Rental</th><th class="num">Amount</th></tr></thead>
+            <tbody>
+            <?php if ($rows): $i = $pg['offset'] + 1; foreach ($rows as $row): $carName = trim(($row['make_name'] ?? '') . ' ' . ($row['model_name'] ?? '') . ' ' . ($row['car_year'] ?? '')); ?>
+                <tr>
+                    <td class="muted"><?= $i++; ?></td>
+                    <td class="nowrap"><?= h(cr_date($row['payment_date'])) ?></td>
+                    <td><span class="cell-title"><?= h($row['full_name']); ?></span></td>
+                    <td><?= h($carName !== '' ? $carName : $row['reg_no']); ?><span class="cell-sub"><span class="plate"><?= h($row['reg_no']); ?></span></span></td>
+                    <td>#<?= h($row['rental_id']); ?></td>
+                    <td class="num"><?= money((float)$row['amount']); ?></td>
+                </tr>
+            <?php endforeach; else: ?>
+                <tr><td colspan="6" class="table-empty">No payment records found.</td></tr>
+            <?php endif; ?>
+            </tbody>
+            <?php if ($rows): ?>
+            <tfoot><tr><td colspan="5">Total (<?= $paymentCount; ?> payment<?= $paymentCount === 1 ? '' : 's'; ?>)</td><td class="num"><?= money($total); ?></td></tr></tfoot>
+            <?php endif; ?>
+        </table>
+    </div>
+    <?= cr_pagination($pg); ?>
+</div>
+<?php cr_layout_end(); ?>

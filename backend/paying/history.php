@@ -27,19 +27,101 @@ $interestUpTo = function (string $date) use ($charges): float {
 $carName = trim(($summary['make_name'] ?? '') . ' ' . ($summary['model_name'] ?? '') . ' ' . ($summary['car_year'] ?? '')); if ($carName === '') $carName = $summary['reg_no'] ?? 'N/A';
 $totalCost = (float)$summary['total_cost'];
 ?>
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Payment History</title></head><body>
-<?php include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/leftsidebar.php'; ?>
-<div class="content-page"><h2>Payment History</h2>
-<div class="payment-history-summary"><div><h3><?= h($summary['customer_name']); ?></h3><p><?= h($summary['phone_number']); ?> <?= $summary['email'] ? ' | ' . h($summary['email']) : ''; ?></p></div><div><strong>Rental #<?= h($summary['rental_id']); ?></strong><p><?= h($carName); ?> | Reg: <?= h($summary['reg_no']); ?></p></div><div><strong><?= h(cr_date($summary['start_date'])) ?> to <?= h(cr_date($summary['end_date'])) ?></strong><p>Status: <?= h($summary['rental_status']); ?></p></div></div>
-<div class="payment-total-grid"><div class="card-box"><p>Rental Cost</p><h2><?= money($totalCost); ?></h2></div><div class="card-box"><p>Late Interest</p><h2><?= money((float)$bill['late_interest']); ?></h2><p><?= h($bill['late_days']); ?> late day(s)</p></div><div class="card-box"><p>Total Due</p><h2><?= money((float)$bill['grand_total']); ?></h2></div><div class="card-box"><p>Total Paid</p><h2><?= money((float)$summary['total_paid']); ?></h2></div><div class="card-box"><p>Remaining</p><h2><?= money((float)$bill['remaining']); ?></h2></div><div class="card-box"><p>Payment Status</p><h2><?= h($bill['status']); ?></h2></div></div>
-<div style="margin:14px 0;"><a href="manage.php" class="btn btn-primary">Back to Payments</a></div>
-<div class="table-responsive"><table class="table" border="1" cellpadding="10"><thead><tr><th>#</th><th>Payment Date</th><th>Method</th><th>Note</th><th>Amount Paid</th><th>Running Total</th><th>Balance After Payment</th></tr></thead><tbody>
-<?php if ($payments): ?><?php $i=1; $running=0.0; foreach ($payments as $payment): $running+=(float)$payment['amount']; $balanceAfter=max(round($totalCost + $interestUpTo($payment['payment_date']) - $running, 2), 0); ?><tr><td><?= $i++; ?></td><td><?= h(cr_date($payment['payment_date'])) ?></td><td><?= h($payment['payment_method'] ?? ""); ?></td><td><?= h($payment['payment_note'] ?? ""); ?></td><td><?= money((float)$payment['amount']); ?></td><td><?= money($running); ?></td><td><?= money($balanceAfter); ?></td></tr><?php endforeach; ?><?php else: ?><tr><td colspan="7">No payment has been recorded for this rental yet.</td></tr><?php endif; ?></tbody></table></div>
+<?php $owed = (float)$bill['remaining'] > 0; ?>
+<?php cr_layout_start('Payment history'); ?>
+<a class="back-link" href="manage.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All payments</a>
+<?= cr_page_header('Payment history – rental #' . $summary['rental_id'], 'Every payment and late-interest charge for this rental.'); ?>
+
+<div class="stats">
+    <div class="stat <?= (float)$bill['late_interest'] > 0 ? 'tone-warning' : 'tone-neutral'; ?>"><div class="stat-icon"><?= cr_icon('clock'); ?></div><div><div class="stat-label">Late interest · <?= h($bill['late_days']); ?> late day(s)</div><div class="stat-value"><?= money((float)$bill['late_interest']); ?></div></div></div>
+    <div class="stat"><div class="stat-icon"><?= cr_icon('wallet'); ?></div><div><div class="stat-label">Total due</div><div class="stat-value"><?= money((float)$bill['grand_total']); ?></div></div></div>
+    <div class="stat tone-success"><div class="stat-icon"><?= cr_icon('check-circle'); ?></div><div><div class="stat-label">Total paid</div><div class="stat-value"><?= money((float)$summary['total_paid']); ?></div></div></div>
+    <div class="stat <?= $owed ? 'tone-danger' : 'tone-success'; ?>"><div class="stat-icon"><?= cr_icon($owed ? 'alert' : 'check'); ?></div><div><div class="stat-label">Remaining</div><div class="stat-value<?= $owed ? ' text-danger' : ''; ?>"><?= money((float)$bill['remaining']); ?></div></div></div>
+</div>
+
+<div class="card">
+    <dl class="details">
+        <dt>Customer</dt>
+        <dd><span class="cell-title"><?= h($summary['customer_name']); ?></span><?php if(($summary['phone_number'] ?? '') !== '' || ($summary['email'] ?? '') !== ''): ?><span class="cell-sub"><?= h($summary['phone_number']); ?><?= $summary['email'] ? ' · ' . h($summary['email']) : ''; ?></span><?php endif; ?></dd>
+        <dt>Car</dt>
+        <dd><?= h($carName); ?> <span class="plate"><?= h($summary['reg_no']); ?></span></dd>
+        <dt>Period</dt>
+        <dd><?= h(cr_date($summary['start_date'])) ?> to <?= h(cr_date($summary['end_date'])) ?></dd>
+        <dt>Rental cost</dt>
+        <dd><?= money($totalCost); ?></dd>
+        <dt>Rental status</dt>
+        <dd><?= cr_status_badge((string)$summary['rental_status']); ?></dd>
+        <dt>Payment status</dt>
+        <dd><?= cr_status_badge($bill['status'] === 'Paid' ? 'Paid' : 'Debt', $bill['status']); ?></dd>
+    </dl>
+</div>
+
+<div class="card card-flush">
+    <div class="card-head"><h2>Payments</h2></div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Payment date</th>
+                    <th>Method</th>
+                    <th>Note</th>
+                    <th class="num">Amount paid</th>
+                    <th class="num">Running total</th>
+                    <th class="num">Balance after payment</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php if ($payments): ?>
+                <?php $i=1; $running=0.0; foreach ($payments as $payment): $running+=(float)$payment['amount']; $balanceAfter=max(round($totalCost + $interestUpTo($payment['payment_date']) - $running, 2), 0); ?>
+                <tr>
+                    <td class="muted"><?= $i++; ?></td>
+                    <td class="nowrap"><?= h(cr_date($payment['payment_date'])) ?></td>
+                    <td><?= h($payment['payment_method'] ?? ""); ?></td>
+                    <td><?= h($payment['payment_note'] ?? ""); ?></td>
+                    <td class="num"><?= money((float)$payment['amount']); ?></td>
+                    <td class="num"><?= money($running); ?></td>
+                    <td class="num<?= $balanceAfter > 0 ? ' text-danger' : ' muted'; ?>"><?= money($balanceAfter); ?></td>
+                </tr>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <tr><td colspan="7" class="table-empty">No payment has been recorded for this rental yet.</td></tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <?php if ($charges): ?>
-<h3 style="margin-top:20px;">Late Interest Charges</h3>
-<div class="table-responsive"><table class="table" border="1" cellpadding="10"><thead><tr><th>#</th><th>Date</th><th>Unpaid Base</th><th>Rate</th><th>Interest</th></tr></thead><tbody>
-<?php $j=1; foreach ($charges as $charge): ?><tr><td><?= $j++; ?></td><td><?= h(cr_date($charge['charge_date'])) ?></td><td><?= money((float)$charge['base_amount']); ?></td><td><?= h(cr_number((float)$charge['rate'], 2)); ?>%</td><td><?= money((float)$charge['amount']); ?></td></tr><?php endforeach; ?>
-<tr><th colspan="4">Total late interest</th><th><?= money((float)$bill['late_interest']); ?></th></tr>
-</tbody></table></div>
+<div class="card card-flush">
+    <div class="card-head"><h2>Late interest charges</h2></div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Date</th>
+                    <th class="num">Unpaid base</th>
+                    <th class="num">Rate</th>
+                    <th class="num">Interest</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php $j=1; foreach ($charges as $charge): ?>
+                <tr>
+                    <td class="muted"><?= $j++; ?></td>
+                    <td class="nowrap"><?= h(cr_date($charge['charge_date'])) ?></td>
+                    <td class="num"><?= money((float)$charge['base_amount']); ?></td>
+                    <td class="num"><?= h(cr_number((float)$charge['rate'], 2)); ?>%</td>
+                    <td class="num"><?= money((float)$charge['amount']); ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+            <tfoot>
+                <tr><td colspan="4">Total late interest</td><td class="num"><?= money((float)$bill['late_interest']); ?></td></tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
 <?php endif; ?>
-</div></body></html>
+<?php cr_layout_end(); ?>

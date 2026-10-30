@@ -28,8 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($username === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !in_array($role_id, $validRoles, true)) {
         $error = 'Please fill all required fields correctly.';
-    } elseif ($newPassword !== '' && strlen($newPassword) < 8) {
-        $error = 'Password must be at least 8 characters.';
+    } elseif ($newPassword !== '' && ($passwordProblem = cr_password_problem($newPassword)) !== null) {
+        $error = $passwordProblem;
     } elseif ($removesAdmin && $activeAdmins <= 1) {
         $error = 'This is the last active admin. Create another admin before changing this account\'s role or status.';
     } else {
@@ -65,9 +65,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-<!DOCTYPE html><html><head><title>Edit User</title></head><body>
-<?php include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/leftsidebar.php'; ?>
-<div class="content-page"><div class="card-box"><h2>Edit User</h2>
-<?php if($msg): ?><p class="alert-success"><?= h($msg); ?></p><?php endif; ?><?php if($error): ?><p class="alert-error"><?= h($error); ?></p><?php endif; ?>
-<form method="POST"><label>Username:</label><br><input type="text" name="username" value="<?= h($user['username']); ?>" required><br><br><label>Email:</label><br><input type="email" name="email" value="<?= h($user['email']); ?>" required><br><br><label>New Password (leave blank to keep current):</label><br><input type="password" name="password"><br><br><label>Role:</label><br><select name="role_id" required <?= $isSelf ? 'disabled' : ''; ?>><?php while($row=$roles->fetch_assoc()): ?><option value="<?= h($row['id']); ?>" <?= $user['role_id']==$row['id']?'selected':''; ?>><?= h($row['name']); ?></option><?php endwhile; ?></select><br><br><label>Active:</label> <input type="checkbox" name="is_active" <?= $user['is_active'] ? 'checked' : ''; ?> <?= $isSelf ? 'disabled' : ''; ?>><br><br><button type="submit">Update User</button></form>
-</div></div></body></html>
+<?php cr_layout_start('Edit user'); ?>
+<a class="back-link" href="manage.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All users</a>
+<?= cr_page_header('Edit user', 'Change sign-in details, role or status.'); ?>
+<?= cr_alerts($msg, $error); ?>
+<?php if ($isSelf): ?><?= cr_alert('info', 'This is your own account. You cannot change your own role or switch yourself off.'); ?><?php endif; ?>
+
+<form method="POST" class="card card-medium">
+    <div class="form-grid">
+        <div class="field">
+            <label for="username">Username <span class="req">*</span></label>
+            <input type="text" id="username" name="username" maxlength="50" value="<?= h($user['username']); ?>" required>
+        </div>
+        <div class="field">
+            <label for="email">Email <span class="req">*</span></label>
+            <input type="email" id="email" name="email" maxlength="100" value="<?= h($user['email']); ?>" required>
+        </div>
+        <div class="field">
+            <label for="password">New password <span class="opt">(optional)</span></label>
+            <div class="password-wrap">
+                <input type="password" id="password" name="password" minlength="10" maxlength="72" autocomplete="new-password">
+                <button type="button" class="password-toggle" data-password-toggle="password" aria-label="Show password"><?= cr_icon('eye'); ?></button>
+            </div>
+            <span class="hint">At least 10 characters. Leave empty to keep the current password.</span>
+        </div>
+        <div class="field">
+            <label for="role_id">Role <span class="req">*</span></label>
+            <select id="role_id" name="role_id" required <?= $isSelf ? 'disabled' : ''; ?>><?php while ($row = $roles->fetch_assoc()): ?><option value="<?= h($row['id']); ?>" <?= $user['role_id'] == $row['id'] ? 'selected' : ''; ?>><?= h($row['name']); ?></option><?php endwhile; ?></select>
+        </div>
+        <div class="field span-all">
+            <label class="check"><input type="checkbox" name="is_active" <?= $user['is_active'] ? 'checked' : ''; ?> <?= $isSelf ? 'disabled' : ''; ?>> Active (can sign in)</label>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button type="submit"><?= cr_icon('check'); ?> Save changes</button>
+        <a class="btn btn-secondary" href="manage.php">Cancel</a>
+    </div>
+</form>
+<?php cr_layout_end(); ?>

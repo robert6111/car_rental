@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 require __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/rental_status.php'; // cr_valid_date() used by car_validation.php
 require_once __DIR__ . '/car_validation.php';
 
 $msg = $error = '';
@@ -44,95 +45,129 @@ if ($selMake > 0) {
     $ms->close();
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Car</title>
+<?php cr_layout_start('Add car'); ?>
+<a class="back-link" href="all_cars.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All cars</a>
+<?= cr_page_header('Add car', 'Add a car to the fleet so it can be rented out.'); ?>
+<?= cr_alerts($msg, $error); ?>
 
-    <script>
-        // JS to fetch models dynamically when make changes
-        function fetchModels(makeId) {
-            fetch('get_model.php?make_id=' + encodeURIComponent(makeId))
-                .then(response => response.json())
-                .then(data => {
-                    let modelSelect = document.getElementById('model_id');
-                    modelSelect.innerHTML = '<option value="">Select Model</option>';
-                    data.forEach(model => {
-                        let option = document.createElement('option');
-                        option.value = model.id;
-                        option.text = model.name;
-                        modelSelect.add(option);
-                    });
-                });
-        }
-    </script>
-</head>
-<body>
-    <?php
-    include __DIR__ . '/../includes/header.php';
-    include __DIR__ . '/../includes/leftsidebar.php';
-    ?>
-    <div class="content-page">
-<h2>Add New Car</h2>
-<?php if ($msg): ?><div style='color:green;'><?= h($msg) ?></div><?php endif; ?>
-<?php if ($error): ?><div style='color:red;'><?= h($error) ?></div><?php endif; ?>
-
-<form method="post">
-    <label>Registration No:</label><br>
-<input type="text" name="reg_no"
-       required maxlength="20"
-       pattern="^[A-Za-z0-9][A-Za-z0-9\s\-\.]{1,19}$"
-       style="text-transform: uppercase;"
-       value="<?= h($form['reg_no'] ?? '') ?>"
-       title="Enter a valid registration number using letters, numbers, spaces, hyphen or dot.">
-<br><br>
-
-    <label>Make:</label><br>
-    <select name="make_id" id="make_id" onchange="fetchModels(this.value)" required>
-        <option value="">Select Make</option>
-        <?php while ($row = $makes_result->fetch_assoc()): ?>
-            <option value="<?= (int)$row['id'] ?>" <?= $selMake === (int)$row['id'] ? 'selected' : '' ?>><?= h($row['name']) ?></option>
-        <?php endwhile; ?>
-    </select><br><br>
-
-    <label>Model:</label><br>
-    <select name="model_id" id="model_id" required>
-        <option value="">Select Model</option>
-        <?php foreach ($models_for_make as $row): ?>
-            <option value="<?= (int)$row['id'] ?>" <?= $selModel === (int)$row['id'] ? 'selected' : '' ?>><?= h($row['name']) ?></option>
-        <?php endforeach; ?>
-    </select><br><br>
-
-    <label>Year:</label><br>
-    <select name="year_id" required>
-        <option value="">Select Year</option>
-        <?php while ($row = $years_result->fetch_assoc()): ?>
-            <option value="<?= (int)$row['id'] ?>" <?= $selYear === (int)$row['id'] ? 'selected' : '' ?>><?= h($row['year']) ?></option>
-        <?php endwhile; ?>
-    </select><br><br>
-
-    <label>VIN / Chassis No:</label><br><input type="text" name="vin" maxlength="100" placeholder="Optional" value="<?= h($form['vin'] ?? '') ?>"><br><br>
-    <label>Color:</label><br><input type="text" name="color" maxlength="50" placeholder="Example: White" value="<?= h($form['color'] ?? '') ?>"><br><br>
-    <label>Current Mileage:</label><br><input type="number" name="current_mileage" min="0" step="1" value="<?= h($form['current_mileage'] ?? '') ?>"><br><br>
-    <label>Insurance Expiry:</label><br><input type="date" name="insurance_expiry" value="<?= h($form['insurance_expiry'] ?? '') ?>"><br><br>
-    <label>Inspection Expiry:</label><br><input type="date" name="inspection_expiry" value="<?= h($form['inspection_expiry'] ?? '') ?>"><br><br>
-    <label>Branch / Location:</label><br><input type="text" name="branch" maxlength="120" placeholder="Main office / Airport" value="<?= h($form['branch'] ?? '') ?>"><br><br>
-    <label>Price Per Day:</label><br>
-<input type="number" step="0.01" min="0.01" name="price_per_day" value="<?= h($form['price_per_day'] ?? '') ?>" required><br><br>
-    <label>Purchase Value / Capital Value:</label><br><input type="number" step="0.01" min="0" name="purchase_value" value="<?= h($form['purchase_value'] ?? '0') ?>"><br><br>
-
-
-    <label>Status:</label><br>
-    <select name="status" required>
-        <option value="Available" <?= $selStatus === 'Available' ? 'selected' : '' ?>>Available</option>
-        <option value="Maintenance" <?= $selStatus === 'Maintenance' ? 'selected' : '' ?>>Maintenance</option>
-    </select>
-    <small>Rented, Reserved and Not Returned are set automatically from rentals and reservations.</small><br><br>
-
-    <button type="submit">Add Car</button>
-</form>
+<form method="post" class="card">
+    <h2 class="section-title">Car details</h2>
+    <div class="form-grid">
+        <div class="field">
+            <label for="reg_no">Registration number <span class="req">*</span></label>
+            <input type="text" id="reg_no" name="reg_no"
+                   required maxlength="20"
+                   pattern="^[A-Za-z0-9][A-Za-z0-9\s\-\.]{1,19}$"
+                   style="text-transform: uppercase;"
+                   value="<?= h($form['reg_no'] ?? '') ?>"
+                   title="Enter a valid registration number using letters, numbers, spaces, hyphen or dot.">
         </div>
-</body>
-</html>
+        <div class="field">
+            <label for="make_id">Make <span class="req">*</span></label>
+            <select name="make_id" id="make_id" required>
+                <option value="">Select make</option>
+                <?php while ($row = $makes_result->fetch_assoc()): ?>
+                    <option value="<?= (int)$row['id'] ?>" <?= $selMake === (int)$row['id'] ? 'selected' : '' ?>><?= h($row['name']) ?></option>
+                <?php endwhile; ?>
+            </select>
+        </div>
+        <div class="field">
+            <label for="model_id">Model <span class="req">*</span></label>
+            <select name="model_id" id="model_id" required>
+                <option value="">Select model</option>
+                <?php foreach ($models_for_make as $row): ?>
+                    <option value="<?= (int)$row['id'] ?>" <?= $selModel === (int)$row['id'] ? 'selected' : '' ?>><?= h($row['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <span class="hint">Choose the make first.</span>
+        </div>
+        <div class="field">
+            <label for="year_id">Year <span class="req">*</span></label>
+            <select name="year_id" id="year_id" required>
+                <option value="">Select year</option>
+                <?php while ($row = $years_result->fetch_assoc()): ?>
+                    <option value="<?= (int)$row['id'] ?>" <?= $selYear === (int)$row['id'] ? 'selected' : '' ?>><?= h($row['year']) ?></option>
+                <?php endwhile; ?>
+            </select>
+        </div>
+        <div class="field">
+            <label for="color">Colour <span class="opt">(optional)</span></label>
+            <input type="text" id="color" name="color" maxlength="50" placeholder="Example: White" value="<?= h($form['color'] ?? '') ?>">
+        </div>
+        <div class="field">
+            <label for="vin">VIN / chassis number <span class="opt">(optional)</span></label>
+            <input type="text" id="vin" name="vin" maxlength="100" value="<?= h($form['vin'] ?? '') ?>">
+        </div>
+    </div>
+
+    <div class="form-section">
+        <h3>Price and status</h3>
+        <div class="form-grid">
+            <div class="field">
+                <label for="price_per_day">Price per day <span class="req">*</span></label>
+                <input type="number" id="price_per_day" step="0.01" min="0.01" name="price_per_day" value="<?= h($form['price_per_day'] ?? '') ?>" required>
+            </div>
+            <div class="field">
+                <label for="purchase_value">Purchase value <span class="opt">(optional)</span></label>
+                <input type="number" id="purchase_value" step="0.01" min="0" name="purchase_value" value="<?= h($form['purchase_value'] ?? '0') ?>">
+                <span class="hint">What the car cost (capital value).</span>
+            </div>
+            <div class="field">
+                <label for="status">Status <span class="req">*</span></label>
+                <select id="status" name="status" required>
+                    <option value="Available" <?= $selStatus === 'Available' ? 'selected' : '' ?>>Available</option>
+                    <option value="Maintenance" <?= $selStatus === 'Maintenance' ? 'selected' : '' ?>>Maintenance</option>
+                </select>
+                <span class="hint">Rented, Reserved and Not returned are set automatically from rentals and reservations.</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <h3>Mileage, papers and location</h3>
+        <div class="form-grid">
+            <div class="field">
+                <label for="current_mileage">Current mileage <span class="opt">(optional)</span></label>
+                <input type="number" id="current_mileage" name="current_mileage" min="0" step="1" value="<?= h($form['current_mileage'] ?? '') ?>">
+            </div>
+            <div class="field">
+                <label for="insurance_expiry">Insurance expiry</label>
+                <input type="date" id="insurance_expiry" name="insurance_expiry" value="<?= h($form['insurance_expiry'] ?? '') ?>">
+            </div>
+            <div class="field">
+                <label for="inspection_expiry">Inspection expiry</label>
+                <input type="date" id="inspection_expiry" name="inspection_expiry" value="<?= h($form['inspection_expiry'] ?? '') ?>">
+            </div>
+            <div class="field">
+                <label for="branch">Branch / location <span class="opt">(optional)</span></label>
+                <input type="text" id="branch" name="branch" maxlength="120" placeholder="Main office / Airport" value="<?= h($form['branch'] ?? '') ?>">
+            </div>
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit"><?= cr_icon('check'); ?> Add car</button>
+        <a class="btn btn-secondary" href="all_cars.php">Cancel</a>
+    </div>
+</form>
+<script>
+    // Load the models of the chosen make.
+    function fetchModels(makeId) {
+        fetch('get_model.php?make_id=' + encodeURIComponent(makeId))
+            .then(response => response.json())
+            .then(data => {
+                let modelSelect = document.getElementById('model_id');
+                modelSelect.innerHTML = '<option value="">Select model</option>';
+                data.forEach(model => {
+                    let option = document.createElement('option');
+                    option.value = model.id;
+                    option.text = model.name;
+                    modelSelect.add(option);
+                });
+            });
+    }
+    document.getElementById('make_id').addEventListener('change', function () {
+        fetchModels(this.value);
+    });
+</script>
+<?php cr_layout_end(); ?>

@@ -51,4 +51,72 @@ $list=$conn->query("SELECT t.*, u.username, ca.reg_no FROM staff_tasks t LEFT JO
 // "Complete" links stay on the current page.
 $pageQs=($pg['page']>1?'&page='.(int)$pg['page']:'').(isset($_GET['per_page'])?'&per_page='.(int)$pg['per_page']:'');
 ?>
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Staff Tasks</title></head><body><?php include __DIR__.'/../includes/header.php'; include __DIR__.'/../includes/leftsidebar.php';?><div class="content-page"><h2>Staff Task Assignment</h2><?php if($msg):?><p class="success-msg"><?=h($msg)?></p><?php endif;?><?php if($error):?><p class="error-msg"><?=h($error)?></p><?php endif;?><div class="card-box"><form method="POST" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;align-items:end"><div><label>Assign To</label><select name="assigned_to"><option value="">Unassigned</option><?php while($u=$users->fetch_assoc()):?><option value="<?=h($u['id'])?>"><?=h($u['username'])?></option><?php endwhile;?></select></div><div><label>Task Type</label><select name="task_type"><?php foreach($taskTypes as $t):?><option><?=h($t)?></option><?php endforeach;?></select></div><div><label>Title</label><input name="title" maxlength="255" required></div><div><label>Due Date</label><input type="date" name="due_date"></div><div><label>Car</label><select name="car_id"><option value="">None</option><?php while($c=$cars->fetch_assoc()):?><option value="<?=h($c['id'])?>"><?=h(car_display_name($c))?></option><?php endwhile;?></select></div><div><label>Rental</label><select name="rental_id"><option value="">None</option><?php while($r=$rentals->fetch_assoc()):?><option value="<?=h($r['id'])?>">#<?=h($r['id'].' '.$r['full_name'].' '.$r['reg_no'])?></option><?php endwhile;?></select></div><div style="grid-column:1/-1"><label>Description</label><textarea name="description"></textarea></div><button>Assign Task</button></form></div><div class="table-responsive"><table class="table" border="1" cellpadding="10"><tr><th>#</th><th>Task</th><th>Type</th><th>Assigned To</th><th>Car</th><th>Due</th><th>Status</th><th>Action</th></tr><?php if($list&&$list->num_rows): while($t=$list->fetch_assoc()):?><tr><td><?=h($t['id'])?></td><td><strong><?=h($t['title'])?></strong><br><small><?=h($t['description'])?></small></td><td><?=h($t['task_type'])?></td><td><?=h($t['username'])?></td><td><?=h($t['reg_no'])?></td><td><?= h(cr_date($t['due_date'])) ?></td><td><?=h($t['status'])?></td><td><?php if($t['status']!=='Completed'):?><a class="btn btn-success" href="<?=h(stock_action_url('?complete=' . (int)$t['id'] . $pageQs))?>">Complete</a><?php endif;?></td></tr><?php endwhile;else:?><tr><td colspan="8">No tasks yet.</td></tr><?php endif;?></table></div><?= cr_pagination($pg); ?></div></body></html>
+<?php cr_layout_start('Staff tasks'); ?>
+<?= cr_page_header('Staff tasks', 'Assign jobs such as car preparation, cleaning and customer follow-ups to staff.'); ?>
+<?= cr_alerts($msg, $error); ?>
+
+<form method="POST" class="card">
+    <div class="card-head"><h2>Assign task</h2></div>
+    <div class="form-grid">
+        <div class="field span-2">
+            <label for="title">Title <span class="req">*</span></label>
+            <input id="title" name="title" maxlength="255" required>
+        </div>
+        <div class="field">
+            <label for="task_type">Task type</label>
+            <select id="task_type" name="task_type"><?php foreach ($taskTypes as $t): ?><option><?= h($t) ?></option><?php endforeach; ?></select>
+        </div>
+        <div class="field">
+            <label for="assigned_to">Assign to <span class="opt">(optional)</span></label>
+            <select id="assigned_to" name="assigned_to"><option value="">Unassigned</option><?php while ($u = $users->fetch_assoc()): ?><option value="<?= h($u['id']) ?>"><?= h($u['username']) ?></option><?php endwhile; ?></select>
+        </div>
+        <div class="field">
+            <label for="due_date">Due date <span class="opt">(optional)</span></label>
+            <input type="date" id="due_date" name="due_date">
+        </div>
+        <div class="field">
+            <label for="car_id">Car <span class="opt">(optional)</span></label>
+            <select id="car_id" name="car_id"><option value="">None</option><?php while ($c = $cars->fetch_assoc()): ?><option value="<?= h($c['id']) ?>"><?= h(car_display_name($c)) ?></option><?php endwhile; ?></select>
+        </div>
+        <div class="field">
+            <label for="rental_id">Rental <span class="opt">(optional)</span></label>
+            <select id="rental_id" name="rental_id"><option value="">None</option><?php while ($r = $rentals->fetch_assoc()): ?><option value="<?= h($r['id']) ?>">#<?= h($r['id'] . ' ' . $r['full_name'] . ' ' . $r['reg_no']) ?></option><?php endwhile; ?></select>
+        </div>
+        <div class="field span-all">
+            <label for="description">Description <span class="opt">(optional)</span></label>
+            <textarea id="description" name="description" rows="2"></textarea>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button type="submit"><?= cr_icon('check'); ?> Assign task</button>
+    </div>
+</form>
+
+<div class="card card-flush">
+    <div class="card-head"><h2>Tasks</h2></div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>#</th><th>Task</th><th>Type</th><th>Assigned to</th><th>Car</th><th>Due</th><th>Status</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+            <?php if ($list && $list->num_rows): while ($t = $list->fetch_assoc()): ?>
+                <tr>
+                    <td><?= h($t['id']) ?></td>
+                    <td><span class="cell-title"><?= h($t['title']) ?></span><?php if ((string)$t['description'] !== ''): ?><span class="cell-sub"><?= h($t['description']) ?></span><?php endif; ?></td>
+                    <td><?= h($t['task_type']) ?></td>
+                    <td><?= $t['username'] !== null ? h($t['username']) : '<span class="muted">Unassigned</span>' ?></td>
+                    <td><?php if (!empty($t['reg_no'])): ?><span class="plate"><?= h($t['reg_no']) ?></span><?php endif; ?></td>
+                    <td class="nowrap"><?= h(cr_date($t['due_date'])) ?></td>
+                    <td><?= cr_status_badge((string)$t['status']) ?></td>
+                    <td class="actions-cell"><?php if ($t['status'] !== 'Completed'): ?><a class="btn btn-sm btn-success" href="<?= h(stock_action_url('?complete=' . (int)$t['id'] . $pageQs)) ?>"><?= cr_icon('check', 'icon-sm'); ?> Complete</a><?php endif; ?></td>
+                </tr>
+            <?php endwhile; else: ?>
+                <tr><td colspan="8" class="table-empty">No tasks yet.</td></tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+    <?= cr_pagination($pg); ?>
+</div>
+<?php cr_layout_end(); ?>

@@ -30,8 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Username must be 3-50 characters (letters, numbers, dot, dash, underscore).';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = 'Please enter a valid email address.';
-    } elseif (strlen($password) < 10) {
-        $error = 'Password must be at least 10 characters.';
+    } elseif (($pwProblem = cr_password_problem($password)) !== null) {
+        $error = $pwProblem;
     } elseif ($password !== $confirm) {
         $error = 'Passwords do not match.';
     } elseif ($business['company_name'] === '') {
@@ -74,38 +74,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>First-time Setup - Car Rental</title>
-    <link rel="stylesheet" href="<?= h(app_url('includes/css/style.css')); ?>?v=customer-ready-1">
-    <link rel="icon" type="image/png" href="<?= h(app_url('includes/images/logo.png')); ?>">
-</head>
-<body>
-<div class="main-container centered-flex">
-    <div class="form-container">
-        <div class="icon fa fa-user"></div>
-        <form class="centered-flex" method="post" autocomplete="off">
-            <div class="title-register">CREATE ADMIN ACCOUNT</div>
-            <div class="msg">
-                <p class="alert success">Welcome! Create the main administrator account for this system.</p>
-                <?php if ($error): ?><p class="alert error"><?= h($error); ?></p><?php endif; ?>
+<?php cr_auth_start('First-time setup', true); ?>
+<h1>Welcome — let's set up your system</h1>
+<p class="lead">Create the main administrator account and enter your business details. You can change the business details later in Settings.</p>
+<?= cr_alert('error', $error); ?>
+<form method="post" autocomplete="off">
+    <div class="form-section mt-0">
+        <h3>Administrator account</h3>
+        <div class="form-grid">
+            <div class="field">
+                <label for="username">Username <span class="req">*</span></label>
+                <input type="text" id="username" name="username" value="<?= h($username); ?>" autocomplete="username" pattern="[A-Za-z0-9._\-]{3,50}" required>
+                <span class="hint">3–50 letters, numbers, dots, dashes or underscores.</span>
             </div>
-            <div class="field"><input type="text" name="username" placeholder="Username" value="<?= h($username); ?>" required><span class="fa fa-user"></span></div>
-            <div class="field"><input type="email" name="email" placeholder="Email" value="<?= h($email); ?>" required><span class="fa fa-envelope"></span></div>
-            <div class="field"><input type="password" name="password" placeholder="Password (min. 10 characters)" minlength="10" required><span class="fa fa-lock"></span></div>
-            <div class="field"><input type="password" name="confirm_password" placeholder="Confirm password" minlength="10" required><span class="fa fa-lock"></span></div>
-            <div class="msg"><p class="alert success" style="margin-top:6px">Business details (you can change these later in Settings)</p></div>
-            <div class="field"><input type="text" name="company_name" placeholder="Business name" value="<?= h($business['company_name']); ?>" maxlength="120" required><span class="fa fa-building"></span></div>
-            <div class="field"><input type="text" name="currency_code" placeholder="Currency code (e.g. USD, EUR, TRY)" value="<?= h($business['currency_code']); ?>" maxlength="3" pattern="[A-Za-z]{3}" required><span class="fa fa-money"></span></div>
-            <div class="field"><input type="text" name="currency_symbol" placeholder="Currency symbol (e.g. $, €, ₺)" value="<?= h($business['currency_symbol']); ?>" maxlength="8"><span class="fa fa-money"></span></div>
-            <div class="field"><select name="timezone" required aria-label="Timezone" style="width:100%;height:100%;border:none;outline:none;padding-left:40px;background:transparent;color:inherit"><?php foreach (DateTimeZone::listIdentifiers() as $tz): ?><option value="<?= h($tz); ?>"<?= $tz === $business['timezone'] ? ' selected' : ''; ?>><?= h(str_replace('_', ' ', $tz)); ?></option><?php endforeach; ?></select><span class="fa fa-clock-o"></span></div>
-            <div class="field"><input type="text" name="phone_country_code" placeholder="Phone country code (e.g. 90, 254, 1)" value="<?= h($business['phone_country_code']); ?>" maxlength="4" inputmode="numeric"><span class="fa fa-phone"></span></div>
-            <div class="btn-container"><input type="submit" id="login-btn" value="Create Admin"></div>
-        </form>
+            <div class="field">
+                <label for="email">Email <span class="req">*</span></label>
+                <input type="email" id="email" name="email" value="<?= h($email); ?>" autocomplete="email" required>
+            </div>
+            <div class="field">
+                <label for="password">Password <span class="req">*</span></label>
+                <input type="password" id="password" name="password" minlength="10" autocomplete="new-password" required>
+                <span class="hint">At least 10 characters.</span>
+            </div>
+            <div class="field">
+                <label for="confirm_password">Confirm password <span class="req">*</span></label>
+                <input type="password" id="confirm_password" name="confirm_password" minlength="10" autocomplete="new-password" required>
+            </div>
+        </div>
     </div>
-</div>
-</body>
-</html>
+    <div class="form-section">
+        <h3>Business</h3>
+        <div class="form-grid">
+            <div class="field span-all">
+                <label for="company_name">Business name <span class="req">*</span></label>
+                <input type="text" id="company_name" name="company_name" value="<?= h($business['company_name']); ?>" maxlength="120" required>
+            </div>
+            <div class="field">
+                <label for="currency_code">Currency code <span class="req">*</span></label>
+                <input type="text" id="currency_code" name="currency_code" value="<?= h($business['currency_code']); ?>" maxlength="3" pattern="[A-Za-z]{3}" placeholder="USD" required>
+                <span class="hint">Three letters, e.g. USD, EUR, KES, TRY.</span>
+            </div>
+            <div class="field">
+                <label for="currency_symbol">Currency symbol</label>
+                <input type="text" id="currency_symbol" name="currency_symbol" value="<?= h($business['currency_symbol']); ?>" maxlength="8" placeholder="$">
+            </div>
+            <div class="field">
+                <label for="timezone">Time zone <span class="req">*</span></label>
+                <select id="timezone" name="timezone" required><?php foreach (DateTimeZone::listIdentifiers() as $tz): ?><option value="<?= h($tz); ?>"<?= $tz === $business['timezone'] ? ' selected' : ''; ?>><?= h(str_replace('_', ' ', $tz)); ?></option><?php endforeach; ?></select>
+            </div>
+            <div class="field">
+                <label for="phone_country_code">Phone country code</label>
+                <input type="text" id="phone_country_code" name="phone_country_code" value="<?= h($business['phone_country_code']); ?>" maxlength="4" inputmode="numeric" placeholder="1">
+                <span class="hint">Digits only, e.g. 1, 44, 254.</span>
+            </div>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button type="submit" class="btn-block">Create administrator</button>
+    </div>
+</form>
+<?php cr_auth_end(); ?>

@@ -52,67 +52,65 @@ $errorCode = (string)($_GET['error'] ?? '');
 if (isset($deleteErrors[$errorCode])) $error = $deleteErrors[$errorCode];
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Car Management</title>
-    <style>
-        .status-NotReturned { background-color: #7f1d1d; color: #fff; font-weight: bold; }
-        .status-Reserved { background-color: #0d6efd; color: #fff; }
-    </style>
-</head>
-<body>
-    <?php    
-    include __DIR__ . '/../includes/header.php';
-    include __DIR__ . '/../includes/leftsidebar.php';
-?>
-    <div class="content-page">
-<h2>Car List</h2>
-<?php if ($msg): ?><p style="color:green;font-weight:bold;"><?= h($msg); ?></p><?php endif; ?>
-<?php if ($error): ?><p style="color:red;font-weight:bold;"><?= h($error); ?></p><?php endif; ?>
-<a href="add.php">Add New Car</a>
-<form method="GET" style="margin:12px 0;display:flex;gap:10px;align-items:end;flex-wrap:wrap;"><div><label>Search Reg No / Car:</label><br><input type="text" name="q" value="<?= h($q ?? ''); ?>" placeholder="Example: 34 ABC 123"></div><div><label>Status:</label><br><select name="status"><option value="">All</option><?php foreach($car_statuses as $s): ?><option value="<?= h($s) ?>" <?= ($status_filter ?? '')===$s?'selected':'' ?>><?= h($s) ?></option><?php endforeach; ?></select></div><div><button type="submit">Search</button> <a href="all_cars.php">Clear</a></div></form>
-<table border="1" cellpadding="10">
-    <tr>
-        <th>ID</th>
-        <th>Registration No</th>
-        <th>Make</th>
-        <th>Model</th>
-        <th>Year</th>
-        <th>Status</th>
-        <th>Color</th>
-        <th>Mileage</th>
-        <th>Insurance</th>
-        <th>Inspection</th>
-        <th>Branch</th>
-        <th>Price/Day</th>
-        <th>Actions</th>
-    </tr>
-    <?php while($row = $result->fetch_assoc()) : ?>
-    <tr>
-        <td><?= (int)$row['id'] ?></td>
-        <td><?= h($row['reg_no']) ?></td>
-        <td><?= h($row['make']) ?></td>
-        <td><?= h($row['model']) ?></td>
-        <td><?= h($row['car_year']) ?></td>
-        <td class="status status-<?= h(preg_replace('/[^A-Za-z]/', '', (string)$row['availability_status'])) ?>"><?= h($row['availability_status']) ?></td>
-        <td><?= h($row['color'] ?? '') ?></td>
-        <td><?= h($row['current_mileage'] ?? '') ?></td>
-        <td><?= h(cr_date($row['insurance_expiry'] ?? '')) ?></td>
-        <td><?= h(cr_date($row['inspection_expiry'] ?? '')) ?></td>
-        <td><?= h($row['branch'] ?? '') ?></td>
-        <td><?= money((float)($row['price_per_day'] ?? 0)) ?></td>
+<?php cr_layout_start('Manage cars'); ?>
+<?= cr_page_header('Manage cars', 'All cars in the fleet with their papers, price and status.', '<a class="btn" href="add.php">' . cr_icon('plus') . ' Add car</a>'); ?>
+<?= cr_alerts($msg, $error); ?>
 
-        <td>
-            <a href="edit.php?id=<?= (int)$row['id'] ?>">Edit</a> |
-            <a href="<?= h(stock_action_url('delete.php?id=' . (int)$row['id'])); ?>" onclick="return confirm('Delete this car? Cars with any history cannot be deleted.')">Delete</a>
-        </td>
-    </tr>
-    <?php endwhile; ?>
-</table>
-<?= cr_pagination($pg); ?>
+<div class="card">
+    <form method="GET" class="filters">
+        <div class="field grow">
+            <label for="q">Search reg no or car</label>
+            <input type="search" id="q" name="q" value="<?= h($q ?? ''); ?>" placeholder="Example: 34 ABC 123">
+        </div>
+        <div class="field">
+            <label for="status">Status</label>
+            <select id="status" name="status">
+                <option value="">All</option>
+                <?php foreach ($car_statuses as $s): ?><option value="<?= h($s) ?>" <?= ($status_filter ?? '') === $s ? 'selected' : '' ?>><?= h($s) ?></option><?php endforeach; ?>
+            </select>
+        </div>
+        <button type="submit"><?= cr_icon('search'); ?> Filter</button>
+        <a class="btn btn-secondary" href="all_cars.php">Clear</a>
+    </form>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Reg no</th>
+                    <th>Car</th>
+                    <th>Status</th>
+                    <th class="num">Mileage</th>
+                    <th>Papers expire</th>
+                    <th>Branch</th>
+                    <th class="num">Price / day</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php if ($result->num_rows > 0): ?>
+                <?php while ($row = $result->fetch_assoc()) : ?>
+                <tr>
+                    <td class="muted"><?= (int)$row['id'] ?></td>
+                    <td><span class="plate"><?= h($row['reg_no']) ?></span></td>
+                    <td><span class="cell-title"><?= h($row['make'] . ' ' . $row['model']) ?></span><span class="cell-sub"><?= h(trim($row['car_year'] . ((string)($row['color'] ?? '') !== '' ? ' · ' . $row['color'] : ''))) ?></span></td>
+                    <td><?= cr_status_badge((string)$row['availability_status'], ucfirst(strtolower((string)$row['availability_status']))) ?></td>
+                    <td class="num"><?= h($row['current_mileage'] ?? '') ?></td>
+                    <td class="nowrap">Insurance: <?= h(cr_date($row['insurance_expiry'] ?? '') ?: '—') ?><span class="cell-sub">Inspection: <?= h(cr_date($row['inspection_expiry'] ?? '') ?: '—') ?></span></td>
+                    <td><?= h($row['branch'] ?? '') ?></td>
+                    <td class="num"><?= money((float)($row['price_per_day'] ?? 0)) ?></td>
+                    <td><div class="actions">
+                        <a class="btn btn-sm btn-secondary" href="edit.php?id=<?= (int)$row['id'] ?>"><?= cr_icon('edit', 'icon-sm') ?> Edit</a>
+                        <a class="btn btn-sm btn-danger" href="<?= h(stock_action_url('delete.php?id=' . (int)$row['id'])); ?>" data-confirm="Delete this car? Cars with any history cannot be deleted."><?= cr_icon('trash', 'icon-sm') ?> Delete</a>
+                    </div></td>
+                </tr>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <tr><td colspan="9" class="table-empty">No cars found.</td></tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
     </div>
-</body>
-</html>
+    <?= cr_pagination($pg); ?>
+</div>
+<?php cr_layout_end(); ?>

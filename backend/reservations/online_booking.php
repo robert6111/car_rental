@@ -187,89 +187,72 @@ if ($open) {
 
 $companyPhone = cr_setting('company_phone');
 $companyEmail = cr_setting('company_email');
-$hasLogo = cr_setting('company_logo') !== '';
 $today = cr_today();
 $maxDate = date('Y-m-d', strtotime($today . ' +1 year'));
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="robots" content="noindex">
-    <title>Book a Car - <?= h($companyName); ?></title>
-    <style>
-        *{box-sizing:border-box}body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#f4f6f9;margin:0;padding:30px 14px;color:#1f2937}.box{width:min(920px,96vw);margin:auto;background:#fff;border-radius:16px;padding:26px;box-shadow:0 10px 25px rgba(15,23,42,.08)}.brand{display:flex;align-items:center;gap:14px;margin-bottom:12px}.brand img{max-height:56px;max-width:160px;object-fit:contain}h1{margin:0 0 6px;font-size:26px}.muted{color:#64748b;margin-top:0}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 18px}.form-group{min-width:0}.full{grid-column:1/-1}label{display:block;font-weight:600;margin-bottom:5px}.opt{font-weight:400;color:#64748b}input,select,textarea{width:100%;padding:11px 12px;margin:0 0 15px;border:1px solid #d1d5db;border-radius:8px;background:#fff;font:inherit;color:inherit}input:focus,select:focus,textarea:focus{outline:2px solid #2563eb;outline-offset:1px}textarea{min-height:92px;resize:vertical}button{width:100%;background:#0f172a;color:#fff;border:0;border-radius:8px;padding:13px 18px;font-weight:700;font-size:15px;cursor:pointer}.success,.error{padding:11px 13px;border-radius:8px}.success{color:#166534;background:#f0fdf4;border:1px solid #bbf7d0}.error{color:#991b1b;background:#fef2f2;border:1px solid #fecaca}.hp{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}.contact{margin-top:18px;color:#64748b;font-size:14px}@media(max-width:680px){body{padding:14px 8px}.box{padding:20px 16px}.form-grid{grid-template-columns:1fr}.full{grid-column:auto}h1{font-size:22px}}
-    </style>
-</head>
-<body>
-<main class="box">
-    <div class="brand">
-        <?php if ($hasLogo): ?><img src="../settings/logo.php" alt=""><?php endif; ?>
-        <div><h1><?= h($companyName); ?></h1><p class="muted" style="margin:0">Car booking request</p></div>
-    </div>
+<?php cr_auth_start('Book a car', true); ?>
+<h1>Car booking request</h1>
+<?php if ($msg): ?><?= cr_alert('success', $msg); ?><?php endif; ?>
 
-    <?php if ($msg): ?><p class="success" role="status"><?= h($msg); ?></p><?php endif; ?>
+<?php if (!$open): ?>
+    <?= cr_alert('info', 'Online booking is currently closed. Please contact the office to book a car.'); ?>
+<?php else: ?>
+    <p class="lead">Send your details and the office will confirm availability. This is a request, not a confirmed booking.</p>
+    <?= cr_alert('error', $error); ?>
 
-    <?php if (!$open): ?>
-        <p class="error">Online booking is currently closed. Please contact the office to book a car.</p>
-    <?php else: ?>
-        <p class="muted">Send your details and the office will confirm availability. This is a request, not a confirmed booking.</p>
-        <?php if ($error): ?><p class="error" role="alert"><?= h($error); ?></p><?php endif; ?>
-
-        <form method="POST" autocomplete="on" class="stock-no-csrf">
-            <input type="hidden" name="submission_token" value="<?= h($formToken); ?>">
-            <div class="hp" aria-hidden="true"><label for="website">Leave this empty</label><input type="text" id="website" name="website" tabindex="-1" autocomplete="off"></div>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="customer_name">Full name *</label>
-                    <input id="customer_name" name="customer_name" required maxlength="100" autocomplete="name" value="<?= h($values['customer_name']); ?>">
-                </div>
-                <div class="form-group">
-                    <label for="phone_number">Phone *</label>
-                    <input id="phone_number" type="tel" name="phone_number" required maxlength="30" pattern="\+?[0-9 ()\-.]{6,30}" autocomplete="tel" value="<?= h($values['phone_number']); ?>">
-                </div>
-                <div class="form-group full">
-                    <label for="email">Email <span class="opt">(optional)</span></label>
-                    <input id="email" type="email" name="email" maxlength="190" autocomplete="email" value="<?= h($values['email']); ?>">
-                </div>
-                <div class="form-group full">
-                    <label for="car_id">Car *</label>
-                    <select id="car_id" name="car_id" required>
-                        <option value="">Select a car</option>
-                        <?php foreach ($cars as $c): ?>
-                            <option value="<?= $c['id']; ?>" <?= $values['car_id'] === (string)$c['id'] ? 'selected' : ''; ?>><?= h($c['label'] . ' - ' . money_text($c['price']) . ' / day'); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="pickup_date">Pickup date *</label>
-                    <input id="pickup_date" type="date" name="pickup_date" required min="<?= h($today); ?>" max="<?= h($maxDate); ?>" value="<?= h($values['pickup_date']); ?>">
-                </div>
-                <div class="form-group">
-                    <label for="dropoff_date">Dropoff date *</label>
-                    <input id="dropoff_date" type="date" name="dropoff_date" required min="<?= h($today); ?>" value="<?= h($values['dropoff_date']); ?>">
-                </div>
-                <div class="form-group">
-                    <label for="pickup_location">Pickup location <span class="opt">(optional)</span></label>
-                    <input id="pickup_location" name="pickup_location" maxlength="150" value="<?= h($values['pickup_location']); ?>">
-                </div>
-                <div class="form-group">
-                    <label for="dropoff_location">Dropoff location <span class="opt">(optional)</span></label>
-                    <input id="dropoff_location" name="dropoff_location" maxlength="150" value="<?= h($values['dropoff_location']); ?>">
-                </div>
-                <div class="form-group full">
-                    <label for="notes">Notes <span class="opt">(optional)</span></label>
-                    <textarea id="notes" name="notes" maxlength="1000"><?= h($values['notes']); ?></textarea>
-                </div>
+    <form method="POST" autocomplete="on" class="stock-no-csrf">
+        <input type="hidden" name="submission_token" value="<?= h($formToken); ?>">
+        <div class="sr-only" aria-hidden="true"><label for="website">Leave this empty</label><input type="text" id="website" name="website" tabindex="-1" autocomplete="off"></div>
+        <div class="form-grid">
+            <div class="field">
+                <label for="customer_name">Full name <span class="req">*</span></label>
+                <input id="customer_name" name="customer_name" required maxlength="100" autocomplete="name" value="<?= h($values['customer_name']); ?>">
             </div>
-            <button type="submit">Send booking request</button>
-        </form>
-    <?php endif; ?>
-
-    <?php if ($companyPhone || $companyEmail): ?>
-        <p class="contact">Questions? <?= $companyPhone ? 'Call ' . h($companyPhone) : ''; ?><?= $companyPhone && $companyEmail ? ' or email ' : ($companyEmail ? 'Email ' : ''); ?><?= $companyEmail ? '<a href="mailto:' . h($companyEmail) . '">' . h($companyEmail) . '</a>' : ''; ?></p>
-    <?php endif; ?>
-</main>
-</body>
-</html>
+            <div class="field">
+                <label for="phone_number">Phone <span class="req">*</span></label>
+                <input id="phone_number" type="tel" name="phone_number" required maxlength="30" pattern="\+?[0-9 ()\-.]{6,30}" autocomplete="tel" value="<?= h($values['phone_number']); ?>">
+            </div>
+            <div class="field span-all">
+                <label for="email">Email <span class="opt">(optional)</span></label>
+                <input id="email" type="email" name="email" maxlength="190" autocomplete="email" value="<?= h($values['email']); ?>">
+            </div>
+            <div class="field span-all">
+                <label for="car_id">Car <span class="req">*</span></label>
+                <select id="car_id" name="car_id" required>
+                    <option value="">Select a car</option>
+                    <?php foreach ($cars as $c): ?>
+                        <option value="<?= $c['id']; ?>" <?= $values['car_id'] === (string)$c['id'] ? 'selected' : ''; ?>><?= h($c['label'] . ' - ' . money_text($c['price']) . ' / day'); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="field">
+                <label for="pickup_date">Pickup date <span class="req">*</span></label>
+                <input id="pickup_date" type="date" name="pickup_date" required min="<?= h($today); ?>" max="<?= h($maxDate); ?>" value="<?= h($values['pickup_date']); ?>">
+            </div>
+            <div class="field">
+                <label for="dropoff_date">Return date <span class="req">*</span></label>
+                <input id="dropoff_date" type="date" name="dropoff_date" required min="<?= h($today); ?>" value="<?= h($values['dropoff_date']); ?>">
+            </div>
+            <div class="field">
+                <label for="pickup_location">Pickup location <span class="opt">(optional)</span></label>
+                <input id="pickup_location" name="pickup_location" maxlength="150" value="<?= h($values['pickup_location']); ?>">
+            </div>
+            <div class="field">
+                <label for="dropoff_location">Return location <span class="opt">(optional)</span></label>
+                <input id="dropoff_location" name="dropoff_location" maxlength="150" value="<?= h($values['dropoff_location']); ?>">
+            </div>
+            <div class="field span-all">
+                <label for="notes">Notes <span class="opt">(optional)</span></label>
+                <textarea id="notes" name="notes" maxlength="1000" rows="3"><?= h($values['notes']); ?></textarea>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-block"><?= cr_icon('calendar-check'); ?> Send booking request</button>
+        </div>
+    </form>
+<?php endif; ?>
+<?php
+$contact = '';
+if ($companyPhone !== '') $contact .= cr_icon('phone', 'icon-sm') . ' <a href="tel:' . h(preg_replace('/[^0-9+]/', '', $companyPhone)) . '">' . h($companyPhone) . '</a>';
+if ($companyEmail !== '') $contact .= ($contact ? ' &nbsp;·&nbsp; ' : '') . cr_icon('mail', 'icon-sm') . ' <a href="mailto:' . h($companyEmail) . '">' . h($companyEmail) . '</a>';
+cr_auth_end($contact !== '' ? 'Questions? ' . $contact : '');

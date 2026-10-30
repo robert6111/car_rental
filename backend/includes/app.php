@@ -185,4 +185,15 @@ function car_display_name(array $row): string {
     return trim($name . ($reg ? ' - ' . $reg : '')) ?: 'N/A';
 }
 
-?>
+/** One password rule for every form (setup, add/edit user, change and reset password). */
+const CR_PASSWORD_MIN = 10;
+
+/** Returns a message when the password is not acceptable, otherwise null. */
+function cr_password_problem(string $password): ?string {
+    if (strlen($password) < CR_PASSWORD_MIN) return 'The password must be at least ' . CR_PASSWORD_MIN . ' characters long.';
+    if (strlen($password) > 72) return 'The password is too long (maximum 72 characters).';
+    return null;
+}
+
+require_once __DIR__ . '/layout.php';
+

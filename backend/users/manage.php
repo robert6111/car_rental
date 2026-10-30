@@ -6,11 +6,36 @@ $pg = cr_page_count($conn, $pg, "SELECT COUNT(*) FROM users u JOIN roles r ON u.
 $sql = "SELECT u.id, u.username, u.email, u.is_active, r.name AS role_name FROM users u JOIN roles r ON u.role_id = r.id ORDER BY u.id DESC" . cr_page_sql($pg);
 $result = $conn->query($sql);
 ?>
-<!DOCTYPE html><html><head><title>Manage Users</title></head><body>
-<?php include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/leftsidebar.php'; ?>
-<div class="content-page"><div class="card-box"><h2>Manage Users</h2><?php if(($_GET['error'] ?? '') === 'last_admin'): ?><p class="alert-error">The last active admin cannot be deleted.</p><?php endif; ?><br><a href="add.php" class="btn btn-primary">Add New User</a><br><br>
-<div class="table-responsive"><table class="table" border="1" cellpadding="10"><tr><th>#</th><th>Username</th><th>Email</th><th>Role</th><th>Active</th><th>Actions</th></tr>
-<?php if($result && $result->num_rows > 0): $count=(int)$pg['offset']+1; while($row=$result->fetch_assoc()): ?>
-<tr><td><?= $count++; ?></td><td><?= h($row['username']); ?></td><td><?= h($row['email']); ?></td><td><?= h($row['role_name']); ?></td><td><?= $row['is_active'] ? 'Yes' : 'No'; ?></td><td><a href="edit.php?id=<?= h($row['id']); ?>">Edit</a><?php if((int)$row['id'] !== (int)$_SESSION['user_id']): ?> | <a href="<?= h(stock_action_url('delete.php?id=' . (int)$row['id'])); ?>" onclick="return confirm('Delete this user?')">Delete</a><?php endif; ?></td></tr>
-<?php endwhile; else: ?><tr><td colspan="6">No users found.</td></tr><?php endif; ?>
-</table></div><?= cr_pagination($pg); ?></div></div></body></html>
+<?php cr_layout_start('Users'); ?>
+<?= cr_page_header('Users', 'Everyone who can sign in to the back office.', '<a class="btn" href="add.php">' . cr_icon('user-plus') . ' Add user</a>'); ?>
+<?php if (($_GET['error'] ?? '') === 'last_admin'): ?><?= cr_alert('error', 'The last active admin cannot be deleted.'); ?><?php endif; ?>
+
+<div class="card card-flush">
+    <div class="card-head"><h2>All users</h2></div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>#</th><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+            <?php if ($result && $result->num_rows > 0): $count = (int)$pg['offset'] + 1; while ($row = $result->fetch_assoc()): ?>
+                <tr>
+                    <td class="muted"><?= $count++; ?></td>
+                    <td><span class="cell-title"><?= h($row['username']); ?></span><?php if ((int)$row['id'] === (int)$_SESSION['user_id']): ?><span class="cell-sub">This is you</span><?php endif; ?></td>
+                    <td><?= h($row['email']); ?></td>
+                    <td><span class="badge <?= strcasecmp((string)$row['role_name'], 'Admin') === 0 ? 'badge-purple' : 'badge-info'; ?>"><?= h($row['role_name']); ?></span></td>
+                    <td><?= $row['is_active'] ? cr_status_badge('Active') : cr_status_badge('Inactive'); ?></td>
+                    <td class="actions-cell">
+                        <a href="edit.php?id=<?= h($row['id']); ?>" class="btn btn-sm btn-secondary"><?= cr_icon('edit', 'icon-sm'); ?> Edit</a>
+                        <?php if ((int)$row['id'] !== (int)$_SESSION['user_id']): ?>
+                        <a href="<?= h(stock_action_url('delete.php?id=' . (int)$row['id'])); ?>" data-confirm="Delete this user?" class="btn btn-sm btn-danger"><?= cr_icon('trash', 'icon-sm'); ?> Delete</a>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            <?php endwhile; else: ?>
+                <tr><td colspan="6" class="table-empty">No users found.</td></tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+    <?= cr_pagination($pg); ?>
+</div>
+<?php cr_layout_end(); ?>

@@ -43,34 +43,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $emailReady) {
     }
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forgot Password - Car Rental</title>
-    <link rel="stylesheet" href="<?= h(app_url('includes/css/style.css')); ?>?v=customer-ready-1">
-</head>
-<body>
-<div class="main-container centered-flex">
-    <div class="form-container">
-        <div class="icon fa fa-lock"></div>
-        <form class="centered-flex" method="post">
-            <div class="title-register">FORGOT PASSWORD</div>
-            <div class="msg">
-                <?php if (!$emailReady): ?>
-                    <p class="alert error">Password reset by email is not available on this system. Please ask your administrator to set a new password for you.</p>
-                <?php endif; ?>
-                <?php if ($error): ?><p class="alert error"><?= h($error); ?></p><?php endif; ?>
-                <?php if ($success): ?><p class="alert success"><?= h($success); ?></p><?php endif; ?>
-            </div>
-            <?php if ($emailReady): ?>
-                <div class="field"><input type="email" name="email" placeholder="Email" required><span class="fa fa-envelope"></span></div>
-                <div class="btn-container"><input type="submit" id="login-btn" value="Send Reset Link"></div>
-            <?php endif; ?>
-            <div class="signup"><a href="login.php">Back to Login</a></div>
-        </form>
+<?php cr_auth_start('Forgot password'); ?>
+<h1>Forgot your password?</h1>
+<?php if ($emailReady): ?>
+    <p class="lead">Enter your email address. If it belongs to an account, we will send you a link to choose a new password.</p>
+<?php else: ?>
+    <?= cr_alert('info', 'Password reset by email is not set up on this system. Please ask your administrator to set a new password for you.'); ?>
+<?php endif; ?>
+<?= cr_alert('error', $error) . cr_alert('success', $success); ?>
+<?php if ($emailReady): ?>
+<form method="post">
+    <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" autocomplete="username" required autofocus>
     </div>
-</div>
-</body>
-</html>
+    <div class="form-actions mt-3">
+        <button type="submit" class="btn-block">Send reset link</button>
+    </div>
+</form>
+<?php endif; ?>
+<p class="auth-links"><a href="login.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> Back to sign in</a></p>
+<?php cr_auth_end(); ?>

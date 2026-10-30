@@ -68,11 +68,47 @@ $completedCars = $conn->query("SELECT rentals.id AS rental_id, cars.id AS car_id
     WHERE rentals.status = 'Completed'
     ORDER BY rentals.end_date DESC, makes.name, models.name, cars.reg_no");
 ?>
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Report Car Damage</title></head><body>
-<?php include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/leftsidebar.php'; ?>
-<div class="content-page">
-<?php if(isset($_SESSION['success'])){ echo "<div style='text-align:center; padding:10px; color:green; font-weight:bold;'>" . h($_SESSION['success']) . "</div>"; unset($_SESSION['success']); } if(isset($_SESSION['error'])){ echo "<div style='text-align:center; padding:10px; color:red; font-weight:bold;'>" . h($_SESSION['error']) . "</div>"; unset($_SESSION['error']); } ?>
-<h2>Report Car Damage</h2><br><div class="mb-3"><a href="../maintainance_and_repair/list_damage.php" class="btn btn-primary">List car damages</a></div>
-<form method="POST"><label>Select Completed Rental / Car:</label><br><select name="rental_picker" id="rentalPicker" required><option value="">-- Select completed rental --</option><?php while ($row = $completedCars->fetch_assoc()) : ?><option value="<?= h($row['rental_id']); ?>" data-car="<?= h($row['car_id']); ?>"><?= h($row['make_name'] . ' ' . $row['model_name'] . ' (' . $row['reg_no'] . ') - Renter: ' . $row['customer_name'] . ' - ' . cr_date($row['start_date']) . ' to ' . cr_date($row['end_date'])) ?></option><?php endwhile; ?></select><br><br><input type="hidden" name="car_id" id="car_id"><input type="hidden" name="rental_id" id="rental_id"><label>Damage Description:</label><br><textarea name="damage_description" required></textarea><br><br><label>Severity:</label><br><select name="severity" required><?php foreach ($damageSeverities as $sev): ?><option value="<?= h($sev) ?>"><?= h(ucfirst($sev)) ?></option><?php endforeach; ?></select><br><br><label>Estimated Cost:</label><br><input type="number" name="estimated_cost" step="0.01" min="0" required><br><br><label>Date Reported:</label><br><input type="date" name="date_reported" value="<?= h(cr_today()) ?>" max="<?= h(cr_today()) ?>" required><br><br><button type="submit">Submit Damage Report</button></form>
+<?php cr_layout_start('Report damage'); ?>
+<a class="back-link" href="list_damage.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All damages</a>
+<?= cr_page_header('Report damage', 'Record damage found on a car after a completed rental.', '<a class="btn btn-secondary" href="list_damage.php">' . cr_icon('list') . ' List car damages</a>'); ?>
+<?php if (isset($_SESSION['success'])) { echo cr_alert('success', (string)$_SESSION['success']); unset($_SESSION['success']); } if (isset($_SESSION['error'])) { echo cr_alert('error', (string)$_SESSION['error']); unset($_SESSION['error']); } ?>
+
+<form method="POST" class="card">
+    <input type="hidden" name="car_id" id="car_id">
+    <input type="hidden" name="rental_id" id="rental_id">
+    <div class="form-grid">
+        <div class="field span-all">
+            <label for="rentalPicker">Completed rental / car <span class="req">*</span></label>
+            <select name="rental_picker" id="rentalPicker" required>
+                <option value="">Select completed rental</option>
+                <?php while ($row = $completedCars->fetch_assoc()) : ?>
+                <option value="<?= h($row['rental_id']); ?>" data-car="<?= h($row['car_id']); ?>"><?= h($row['make_name'] . ' ' . $row['model_name'] . ' (' . $row['reg_no'] . ') - Renter: ' . $row['customer_name'] . ' - ' . cr_date($row['start_date']) . ' to ' . cr_date($row['end_date'])) ?></option>
+                <?php endwhile; ?>
+            </select>
+        </div>
+        <div class="field span-all">
+            <label for="damage_description">Damage description <span class="req">*</span></label>
+            <textarea id="damage_description" name="damage_description" rows="3" required></textarea>
+        </div>
+        <div class="field">
+            <label for="severity">Severity <span class="req">*</span></label>
+            <select id="severity" name="severity" required>
+                <?php foreach ($damageSeverities as $sev): ?><option value="<?= h($sev) ?>"><?= h(ucfirst($sev)) ?></option><?php endforeach; ?>
+            </select>
+        </div>
+        <div class="field">
+            <label for="estimated_cost">Estimated cost <span class="req">*</span></label>
+            <input type="number" id="estimated_cost" name="estimated_cost" step="0.01" min="0" required>
+        </div>
+        <div class="field">
+            <label for="date_reported">Date reported <span class="req">*</span></label>
+            <input type="date" id="date_reported" name="date_reported" value="<?= h(cr_today()) ?>" max="<?= h(cr_today()) ?>" required>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button type="submit"><?= cr_icon('check'); ?> Save damage report</button>
+        <a class="btn btn-secondary" href="list_damage.php">Cancel</a>
+    </div>
+</form>
 <script>document.getElementById('rentalPicker').addEventListener('change',function(){const opt=this.options[this.selectedIndex];document.getElementById('rental_id').value=this.value||'';document.getElementById('car_id').value=opt?(opt.dataset.car||''):'';});</script>
-</div></body></html>
+<?php cr_layout_end(); ?>

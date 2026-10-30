@@ -55,79 +55,53 @@ if (isset($_GET['action']) && $_GET['action'] === 'del' && isset($_GET['customer
 $pg = cr_page_count($conn, cr_page(), "SELECT COUNT(*) FROM customers");
 $result = $conn->query("SELECT c.*, (SELECT COUNT(*) FROM rentals r WHERE r.customer_id=c.id AND r.status='Completed') AS completed_rentals FROM customers c ORDER BY c.id DESC" . cr_page_sql($pg));
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Customers</title>
-</head>
-<body>
-<?php include __DIR__ . '/../includes/header.php'; ?>
-<?php include __DIR__ . '/../includes/leftsidebar.php'; ?>
-<div class="content-page">
-    <div class="main-content">
-        <div class="container mt-4">
-            <h2>Customer List</h2>
-            <?php if (!empty($msg)): ?>
-                <div class="alert alert-success"><?= h($msg) ?></div>
-            <?php elseif (!empty($error)): ?>
-                <div class="alert alert-danger"><?= h($error) ?></div>
+<?php cr_layout_start('Customers'); ?>
+<?= cr_page_header('Customers', 'Everyone registered to rent a car.', '<a class="btn" href="add.php">' . cr_icon('user-plus') . ' Add customer</a>'); ?>
+<?= cr_alerts($msg, $error); ?>
+
+<div class="card">
+    <div class="card-head"><h2>All customers</h2></div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Customer</th>
+                    <th>Licence no.</th>
+                    <th>ID / passport</th>
+                    <th>Expiry dates</th>
+                    <th>Loyalty</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php if ($result->num_rows > 0): ?>
+                <?php $count = $pg['offset'] + 1; ?>
+                <?php while ($row = $result->fetch_assoc()): ?>
+                    <tr>
+                        <td class="muted"><?= $count++ ?></td>
+                        <td class="nowrap"><span class="cell-title"><?= h($row['full_name']) ?></span><span class="cell-sub"><?= h($row['phone_number']) ?></span><?php if ((string)$row['email'] !== ''): ?><span class="cell-sub"><?= h($row['email']) ?></span><?php endif; ?></td>
+                        <td><?= h($row['license_no']) ?></td>
+                        <td><?= h(trim(($row['id_number'] ?? '') . ' ' . ($row['passport_no'] ?? ''))) ?></td>
+                        <td class="nowrap">Licence: <?= h(cr_date($row['license_expiry'] ?? '') ?: '—') ?><span class="cell-sub">Passport: <?= h(cr_date($row['passport_expiry'] ?? '') ?: '—') ?></span></td>
+                        <td><?php if (loyalty_discount_fraction() > 0 && (int)$row['completed_rentals'] >= loyalty_min_rentals()): ?><?= cr_status_badge('Active', 'Loyal (' . (loyalty_discount_fraction() * 100) . '% discount)') ?><?php else: ?><span class="muted"><?= h($row['completed_rentals'] . ' completed rentals') ?></span><?php endif; ?></td>
+                        <td class="actions-cell">
+                            <a href="edit.php?id=<?= (int)$row['id'] ?>" class="btn btn-sm btn-secondary"><?= cr_icon('edit', 'icon-sm') ?> Edit</a>
+                            <a href="<?= h(stock_action_url('customer.php?action=del&customer_id=' . (int)$row['id'])); ?>"
+                               data-confirm="Delete this customer? Customers with rental history cannot be deleted."
+                               class="btn btn-sm btn-danger"><?= cr_icon('trash', 'icon-sm') ?> Delete</a>
+                        </td>
+                    </tr>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <tr><td colspan="7" class="table-empty">No customers yet.</td></tr>
             <?php endif; ?>
-
-            <div class="mb-3">
-                <a href="add.php" class="btn btn-primary">Add New Customer</a>
-            </div>
-
-            <table class="table table-bordered table-striped">
-                <thead class="table-dark">
-                    <tr>
-                        <th>#</th>
-                        <th>Full Name</th>
-                        <th>Phone</th>
-                        <th>Email</th>
-                        <th>License No</th>
-                        <th>ID / Passport</th>
-                        <th>Expiry Alerts</th>
-                        <th>Loyalty</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                <?php if ($result->num_rows > 0): ?>
-                    <?php $count = $pg['offset'] + 1; ?>
-                    <?php while ($row = $result->fetch_assoc()): ?>
-                        <tr>
-                            <td><?= $count++ ?></td>
-                            <td><?= h($row['full_name']) ?></td>
-                            <td><?= h($row['phone_number']) ?></td>
-                            <td><?= h($row['email']) ?></td>
-                            <td><?= h($row['license_no']) ?></td>
-                            <td><?= h(trim(($row['id_number'] ?? '') . ' ' . ($row['passport_no'] ?? ''))) ?></td>
-                            <td>License: <?= h(cr_date($row['license_expiry'] ?? '')) ?><br>Passport: <?= h(cr_date($row['passport_expiry'] ?? '')) ?></td>
-                            <td><?= (loyalty_discount_fraction() > 0 && (int)$row['completed_rentals'] >= loyalty_min_rentals()) ? 'Loyal customer (' . h(loyalty_discount_fraction() * 100) . '% discount)' : h($row['completed_rentals'] . ' completed rentals') ?></td>
-                            <td>
-                                <a href="edit.php?id=<?= (int)$row['id'] ?>" class="btn btn-sm btn-warning">Edit</a>
-                                <a href="<?= h(stock_action_url('customer.php?action=del&customer_id=' . (int)$row['id'])); ?>"
-                                   onclick="return confirm('Delete this customer? Customers with rental history cannot be deleted.')"
-                                   class="btn btn-sm btn-danger">Delete</a>
-                            </td>
-                        </tr>
-                    <?php endwhile; ?>
-                <?php else: ?>
-                    <tr>
-                        <td colspan="9" class="text-center">No customers found.</td>
-                    </tr>
-                <?php endif; ?>
-                </tbody>
-            </table>
-            <?= cr_pagination($pg); ?>
-        </div>
+            </tbody>
+        </table>
     </div>
+    <?= cr_pagination($pg); ?>
 </div>
-</body>
-</html>
-
+<?php cr_layout_end(); ?>
 <?php
 $result->free();
 ?>

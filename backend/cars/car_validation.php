@@ -3,6 +3,8 @@
  * Shared validation for the Add Car and Edit Car forms.
  * Included (require_once) by cars/add.php and cars/edit.php; defines functions only.
  */
+require_once __DIR__ . '/../includes/rental_status.php'; // cr_valid_date()
+
 /** Same rule as the reg_no input's pattern attribute (checked after normalize_plate()). */
 const CR_CAR_REG_PATTERN = '/^[A-Z0-9][A-Z0-9\s\-\.]{1,19}$/';
 

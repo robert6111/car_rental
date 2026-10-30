@@ -55,40 +55,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Fetch all makes for dropdown
 $makes = $conn->query("SELECT id, name FROM makes ORDER BY name ASC");
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Car Model</title>
-</head>
-<body>
-    <?php
-    include __DIR__ . '/../includes/header.php';
-    include __DIR__ . '/../includes/leftsidebar.php';
-?>
-<div class="content-page">
-<h2>Add Car Model</h2>
+<?php cr_layout_start('Add model'); ?>
+<?= cr_page_header('Add model', 'Add a model under a make, such as Corolla under Toyota.'); ?>
+<?= cr_alerts($msg, $error); ?>
 
-<?php if ($msg !== ''): ?><p style='color:green;'><?= h($msg) ?></p><?php endif; ?>
-<?php if ($error !== ''): ?><p style='color:red;'><?= h($error) ?></p><?php endif; ?>
-
-<form method="post">
-    <label for="make">Select Make:</label>
-    <select name="make_id" id="make" required>
-        <option value="">-- Select Make --</option>
-        <?php while ($row = $makes->fetch_assoc()) : ?>
-            <option value="<?= (int)$row['id'] ?>" <?= ($error && $make_id === (int)$row['id']) ? 'selected' : '' ?>><?= h($row['name']) ?></option>
-        <?php endwhile; ?>
-    </select>
-
-    <br><br>
-    <label for="model_name">Model Name:</label>
-    <input type="text" name="model_name" id="model_name" maxlength="50" value="<?= h($error ? $model_name : '') ?>" required>
-
-    <br><br>
-    <button type="submit">Add Model</button>
-</form>
+<form method="post" class="card card-narrow">
+    <div class="form-grid">
+        <div class="field">
+            <label for="make">Make <span class="req">*</span></label>
+            <select name="make_id" id="make" required>
+                <option value="">Select make</option>
+                <?php while ($row = $makes->fetch_assoc()) : ?>
+                    <option value="<?= (int)$row['id'] ?>" <?= ($error && $make_id === (int)$row['id']) ? 'selected' : '' ?>><?= h($row['name']) ?></option>
+                <?php endwhile; ?>
+            </select>
+            <span class="hint">Make missing? <a href="add_make.php">Add the make first</a>.</span>
         </div>
-</body>
-</html>
+        <div class="field">
+            <label for="model_name">Model name <span class="req">*</span></label>
+            <input type="text" name="model_name" id="model_name" maxlength="50" value="<?= h($error ? $model_name : '') ?>" required>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button type="submit"><?= cr_icon('plus'); ?> Add model</button>
+    </div>
+</form>
+<?php cr_layout_end(); ?>

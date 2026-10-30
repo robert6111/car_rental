@@ -71,20 +71,68 @@ $result = $stmt->get_result();
 $stmt->close();
 $today = cr_today();
 ?>
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Rental Report</title></head>
-<body><?php include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/leftsidebar.php'; ?>
-<div class="content-page"><div class="card-box"><h2>Rental Report</h2><br>
-<form method="GET" style="margin-bottom:20px; display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
-<div><label>Status:</label><br><select name="status"><option value="">All</option><?php foreach(['Pending','Active','Completed','Canceled','Not returned'] as $s): ?><option value="<?= h($s); ?>" <?= $status_filter===$s?'selected':''; ?>><?= h($s); ?></option><?php endforeach; ?></select></div>
-<div><label>From:</label><br><input type="date" name="from_date" value="<?= h($from_date); ?>"></div>
-<div><label>To:</label><br><input type="date" name="to_date" value="<?= h($to_date); ?>"></div>
-<div><label>Reg No / Customer:</label><br><input type="text" name="reg_no" value="<?= h($reg_no); ?>" placeholder="Example: 34 ABC 123"></div>
-<div><button type="submit" class="btn btn-primary">Apply Filters</button>
-<a href="export_pdf.php?status=<?= urlencode($status_filter); ?>&from_date=<?= urlencode($from_date); ?>&to_date=<?= urlencode($to_date); ?>&reg_no=<?= urlencode($reg_no); ?>" class="btn btn-danger" target="_blank">Download PDF</a></div>
-</form>
-<p style="color:#64748b;font-size:13px;">Rentals that overlap the chosen period are included. The total excludes canceled rentals.</p>
-<div class="table-responsive"><table class="table" border="1" cellpadding="10"><tr><th>#</th><th>Customer</th><th>Car</th><th>Reg No</th><th>Start</th><th>End</th><th>Cost</th><th>Status</th></tr>
-<?php if($result && $result->num_rows): $i=$pg['offset']+1; while($row=$result->fetch_assoc()): $carName = trim(($row['make_name'] ?? '') . ' ' . ($row['model_name'] ?? '') . ' ' . ($row['car_year'] ?? '')); $statusText = ($row['status'] === 'Completed' && $row['returned_at'] === null && $row['end_date'] < $today) ? 'Completed (not returned)' : $row['status']; ?>
-<tr><td><?= $i++; ?></td><td><?= h($row['full_name']); ?></td><td><?= h($carName !== '' ? $carName : $row['reg_no']); ?></td><td><?= h($row['reg_no']); ?></td><td><?= h(cr_date($row['start_date'])) ?></td><td><?= h(cr_date($row['end_date'])) ?></td><td><?= money((float)$row['total_cost']); ?></td><td><?= h($statusText); ?></td></tr>
-<?php endwhile; ?><tr><th colspan="6">Total (<?= (int)$counted; ?> rental<?= $counted === 1 ? '' : 's'; ?>, canceled excluded)</th><th><?= money($total); ?></th><th></th></tr><?php else: ?><tr><td colspan="8">No rentals found.</td></tr><?php endif; ?>
-</table></div><?= cr_pagination($pg); ?></div></div></body></html>
+<?php
+$rows = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+$pdfUrl = 'export_pdf.php?status=' . urlencode($status_filter) . '&from_date=' . urlencode($from_date) . '&to_date=' . urlencode($to_date) . '&reg_no=' . urlencode($reg_no);
+cr_layout_start('Rental report');
+?>
+<?= cr_page_header('Rental report', 'Rentals by status and period, with their total value.', '<a class="btn btn-secondary" href="' . h($pdfUrl) . '" target="_blank">' . cr_icon('download') . ' Download PDF</a>'); ?>
+
+<div class="card">
+    <form method="GET" class="filters mb-0">
+        <div class="field">
+            <label for="status">Status</label>
+            <select id="status" name="status"><option value="">All</option><?php foreach (['Pending', 'Active', 'Completed', 'Canceled', 'Not returned'] as $s): ?><option value="<?= h($s); ?>" <?= $status_filter === $s ? 'selected' : ''; ?>><?= h($s); ?></option><?php endforeach; ?></select>
+        </div>
+        <div class="field">
+            <label for="from_date">From</label>
+            <input type="date" id="from_date" name="from_date" value="<?= h($from_date); ?>">
+        </div>
+        <div class="field">
+            <label for="to_date">To</label>
+            <input type="date" id="to_date" name="to_date" value="<?= h($to_date); ?>">
+        </div>
+        <div class="field grow">
+            <label for="reg_no">Reg no or customer</label>
+            <input type="text" id="reg_no" name="reg_no" value="<?= h($reg_no); ?>" placeholder="Example: 34 ABC 123">
+        </div>
+        <button type="submit"><?= cr_icon('search'); ?> Filter</button>
+        <a class="btn btn-secondary" href="report.php">Clear</a>
+    </form>
+    <p class="hint mb-0">Rentals that overlap the chosen period are included. The total excludes canceled rentals.</p>
+</div>
+
+<div class="stats">
+    <div class="stat"><div class="stat-icon"><?= cr_icon('calendar'); ?></div><div><div class="stat-label">Rentals found</div><div class="stat-value"><?= (int)$pg['total']; ?></div></div></div>
+    <div class="stat tone-neutral"><div class="stat-icon"><?= cr_icon('list'); ?></div><div><div class="stat-label">Counted in total</div><div class="stat-value"><?= (int)$counted; ?></div></div></div>
+    <div class="stat tone-success"><div class="stat-icon"><?= cr_icon('wallet'); ?></div><div><div class="stat-label">Total value</div><div class="stat-value"><?= money($total); ?></div></div></div>
+</div>
+
+<div class="card card-flush">
+    <div class="card-head"><h2>Rentals</h2></div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>#</th><th>Customer</th><th>Car</th><th>Start</th><th>End</th><th class="num">Cost</th><th>Status</th></tr></thead>
+            <tbody>
+            <?php if ($rows): $i = $pg['offset'] + 1; foreach ($rows as $row): $carName = trim(($row['make_name'] ?? '') . ' ' . ($row['model_name'] ?? '') . ' ' . ($row['car_year'] ?? '')); $notReturned = ($row['status'] === 'Completed' && $row['returned_at'] === null && $row['end_date'] < $today); ?>
+                <tr>
+                    <td class="muted"><?= $i++; ?></td>
+                    <td><span class="cell-title"><?= h($row['full_name']); ?></span></td>
+                    <td><?= h($carName !== '' ? $carName : $row['reg_no']); ?><span class="cell-sub"><span class="plate"><?= h($row['reg_no']); ?></span></span></td>
+                    <td class="nowrap"><?= h(cr_date($row['start_date'])) ?></td>
+                    <td class="nowrap"><?= h(cr_date($row['end_date'])) ?></td>
+                    <td class="num"><?= money((float)$row['total_cost']); ?></td>
+                    <td><?= $notReturned ? cr_status_badge('Not returned', 'Completed (not returned)') : cr_status_badge($row['status']); ?></td>
+                </tr>
+            <?php endforeach; else: ?>
+                <tr><td colspan="7" class="table-empty">No rentals found.</td></tr>
+            <?php endif; ?>
+            </tbody>
+            <?php if ($rows): ?>
+            <tfoot><tr><td colspan="5">Total (<?= (int)$counted; ?> rental<?= $counted === 1 ? '' : 's'; ?>, canceled excluded)</td><td class="num"><?= money($total); ?></td><td></td></tr></tfoot>
+            <?php endif; ?>
+        </table>
+    </div>
+    <?= cr_pagination($pg); ?>
+</div>
+<?php cr_layout_end(); ?>

@@ -68,71 +68,65 @@ $defaultMessage = car_booking_message('', $link);
 $prefillName = trim((string) ($_POST['customer_name'] ?? ''));
 $prefillPhone = trim((string) ($_POST['phone'] ?? ''));
 ?>
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Send WhatsApp Booking Link</title>
-</head>
-<body>
-<?php include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/leftsidebar.php'; ?>
-<div class="content-page">
-    <h2>Send WhatsApp Booking Link</h2>
-    <?php if (!cr_setting_bool('public_booking_enabled')): ?><p class="error-msg">Online booking is switched off, so customers who open this link will see a "closed" message.<?php if (stock_has_permission('settings_manage')): ?> <a href="../settings/index.php">Turn it on in Settings</a>.<?php endif; ?></p><?php endif; ?>
-    <?php if ($error): ?><p class="error-msg"><?= h($error); ?></p><?php endif; ?>
+<?php cr_layout_start('Send booking link'); ?>
+<a class="back-link" href="manage.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All reservations</a>
+<?= cr_page_header('Send booking link', 'Send customers the online booking page on WhatsApp so they can request a car.'); ?>
+<?php if (!cr_setting_bool('public_booking_enabled')): ?>
+    <?= cr_alert('warning', 'Online booking is switched off, so customers who open this link will see a "closed" message.' . (stock_has_permission('settings_manage') ? ' <a href="../settings/index.php">Turn it on in Settings</a>.' : ''), true); ?>
+<?php endif; ?>
+<?= cr_alerts('', $error); ?>
 
-    <div class="card-box" style="border-left:7px solid #16a34a;">
-        <h3>Send Booking Page to Customer WhatsApp</h3>
-        <p>Select an existing customer or enter a WhatsApp number. The button opens WhatsApp with the customer number and booking message already filled.</p>
-        <?php if ($linkInfo['source'] === 'local'): ?>
-            <p style="padding:10px 12px;border-radius:8px;background:#fff7ed;color:#9a3412;"><strong>Local network link.</strong> This link only works for people on the same network as this computer. To send links to customers anywhere, put the system online and enter its address under <a href="<?= h(app_url('settings/index.php')); ?>">Settings &rsaquo; System address</a>.</p>
-        <?php endif; ?>
+<div class="card">
+    <div class="card-head"><h2>Send to a customer on WhatsApp</h2></div>
+    <p class="muted">Select an existing customer or enter a WhatsApp number. The button opens WhatsApp with the customer number and booking message already filled.</p>
+    <?php if ($linkInfo['source'] === 'local'): ?>
+        <?= cr_alert('warning', '<strong>Local network link.</strong> This link only works for people on the same network as this computer. To send links to customers anywhere, put the system online and enter its address under <a href="' . h(app_url('settings/index.php')) . '">Settings &rsaquo; System address</a>.', true); ?>
+    <?php endif; ?>
 
-        <form method="POST" target="_blank" id="whatsappSendForm">
-            <input type="hidden" name="send_whatsapp" value="1">
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;align-items:start;">
-                <div>
-                    <label>1. Select Existing Customer</label>
-                    <select id="customerPicker" name="customer_id">
-                        <option value="" data-name="" data-phone="">Choose customer or type number below</option>
-                        <?php if ($customers): while ($customer = $customers->fetch_assoc()): ?>
-                            <option value="<?= h($customer['id']); ?>" data-name="<?= h($customer['full_name']); ?>" data-phone="<?= h($customer['phone_number']); ?>">
-                                <?= h($customer['full_name'] . ' — ' . $customer['phone_number']); ?>
-                            </option>
-                        <?php endwhile; endif; ?>
-                    </select>
-                </div>
-                <div>
-                    <label>2. Customer Name Optional</label>
-                    <input type="text" name="customer_name" id="customerName" placeholder="Example: Mary" value="<?= h($prefillName); ?>">
-                </div>
-                <div>
-                    <label>3. Customer WhatsApp Number</label>
-                    <input type="text" name="phone" id="customerPhone" placeholder="Local number or with country code" value="<?= h($prefillPhone); ?>">
-                </div>
-                <div style="grid-column:1/-1;">
-                    <label>4. Message Preview</label>
-                    <textarea name="message" id="whatsappMessage" rows="4"></textarea>
-                </div>
+    <form method="POST" target="_blank" id="whatsappSendForm">
+        <input type="hidden" name="send_whatsapp" value="1">
+        <div class="form-grid">
+            <div class="field">
+                <label for="customerPicker">1. Select an existing customer</label>
+                <select id="customerPicker" name="customer_id">
+                    <option value="" data-name="" data-phone="">Choose a customer or type a number below</option>
+                    <?php if ($customers): while ($customer = $customers->fetch_assoc()): ?>
+                        <option value="<?= h($customer['id']); ?>" data-name="<?= h($customer['full_name']); ?>" data-phone="<?= h($customer['phone_number']); ?>"><?= h($customer['full_name'] . ' — ' . $customer['phone_number']); ?></option>
+                    <?php endwhile; endif; ?>
+                </select>
             </div>
-            <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;">
-                <button class="btn btn-success" type="submit">Open WhatsApp and Send Booking Link</button>
-                <button class="btn" id="copyBookingLink" type="button">Copy Booking Link</button>
-                <a class="btn btn-primary" target="_blank" href="<?= h($link); ?>">Open Booking Page</a>
-                <a class="btn" href="booking_link.php">Refresh Detected Link</a>
+            <div class="field">
+                <label for="customerName">2. Customer name <span class="opt">(optional)</span></label>
+                <input type="text" name="customer_name" id="customerName" placeholder="Example: Mary" value="<?= h($prefillName); ?>">
             </div>
-        </form>
-    </div>
-
-    <div class="card-box">
-        <h3>Customer Booking Link</h3>
-        <p>This is the exact public car booking page link that will be sent to customers.</p>
-        <label>Booking Link</label>
-        <input id="bookingLink" type="text" value="<?= h($link); ?>" readonly onclick="this.select()">
-        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;">
-            <a class="btn btn-success" target="_blank" href="https://wa.me/?text=<?= h(rawurlencode($defaultMessage)); ?>">Share Link by WhatsApp Without Customer Number</a>
-            <a class="btn btn-primary" target="_blank" href="<?= h($link); ?>">Open Booking Page</a>
+            <div class="field">
+                <label for="customerPhone">3. Customer WhatsApp number <span class="req">*</span></label>
+                <input type="tel" name="phone" id="customerPhone" placeholder="Local number or with country code" value="<?= h($prefillPhone); ?>">
+            </div>
+            <div class="field span-all">
+                <label for="whatsappMessage">4. Message preview</label>
+                <textarea name="message" id="whatsappMessage" rows="4"></textarea>
+            </div>
         </div>
+        <div class="form-actions">
+            <button class="btn btn-success" type="submit"><?= cr_icon('whatsapp'); ?> Open WhatsApp and send link</button>
+            <button class="btn btn-secondary" id="copyBookingLink" type="button"><?= cr_icon('link'); ?> Copy booking link</button>
+            <a class="btn btn-secondary" target="_blank" rel="noopener" href="<?= h($link); ?>"><?= cr_icon('external'); ?> Open booking page</a>
+            <a class="btn btn-ghost" href="booking_link.php"><?= cr_icon('refresh'); ?> Refresh detected link</a>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-head"><h2>Customer booking link</h2></div>
+    <p class="muted">This is the exact public booking page link that will be sent to customers.</p>
+    <div class="field">
+        <label for="bookingLink">Booking link</label>
+        <input id="bookingLink" type="text" value="<?= h($link); ?>" readonly onclick="this.select()">
+    </div>
+    <div class="row-flex mt-4">
+        <a class="btn btn-success" target="_blank" rel="noopener" href="https://wa.me/?text=<?= h(rawurlencode($defaultMessage)); ?>"><?= cr_icon('whatsapp'); ?> Share on WhatsApp without a number</a>
+        <a class="btn btn-secondary" target="_blank" rel="noopener" href="<?= h($link); ?>"><?= cr_icon('external'); ?> Open booking page</a>
     </div>
 </div>
 <script>
@@ -171,9 +165,9 @@ $prefillPhone = trim((string) ($_POST['phone'] ?? ''));
     copyButton.addEventListener('click', async function () {
         try {
             await navigator.clipboard.writeText(bookingLinkInput.value);
-            const original = copyButton.textContent;
+            const original = copyButton.innerHTML;
             copyButton.textContent = 'Copied';
-            setTimeout(function () { copyButton.textContent = original; }, 1200);
+            setTimeout(function () { copyButton.innerHTML = original; }, 1200);
         } catch (e) {
             bookingLinkInput.focus();
             bookingLinkInput.select();
@@ -183,5 +177,4 @@ $prefillPhone = trim((string) ($_POST['phone'] ?? ''));
     updateMessage();
 })();
 </script>
-</body>
-</html>
+<?php cr_layout_end(); ?>

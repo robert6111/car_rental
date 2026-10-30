@@ -218,8 +218,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Import Data</title></head><body><?php include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/leftsidebar.php'; ?>
-<div class="content-page"><h2>Import Data</h2><?php if($msg): ?><p style="color:green;font-weight:bold;"><?= h($msg); ?></p><?php endif; ?><?php if($error): ?><p style="color:red;font-weight:bold;"><?= h($error); ?></p><?php endif; ?>
-<?php if ($rowErrors): ?><div style="color:#991b1b;"><strong>Skipped rows<?= count($rowErrors) > CR_IMPORT_SHOW_ERRORS ? ' (first ' . CR_IMPORT_SHOW_ERRORS . ' of ' . count($rowErrors) . ')' : '' ?>:</strong><ul><?php foreach (array_slice($rowErrors, 0, CR_IMPORT_SHOW_ERRORS) as $re): ?><li><?= h($re) ?></li><?php endforeach; ?></ul></div><?php endif; ?>
-<form method="POST" enctype="multipart/form-data"><label>Import Type:</label><br><select name="type" required><option value="customers">Customers CSV</option><option value="cars">Cars CSV</option></select><br><br><label>CSV File:</label><br><input type="file" name="csv_file" accept=".csv,text/csv" required><br><br><button type="submit">Import</button></form>
-<h3>Required CSV headers</h3><p><strong>Customers:</strong> full_name, phone_number, license_no (email optional but must be valid)</p><p><strong>Cars:</strong> reg_no, make, model, year, price_per_day (status optional: Available or Maintenance)</p><p>Comma or semicolon separated, maximum 2 MB and <?= (int)CR_IMPORT_MAX_ROWS ?> rows. Invalid or duplicate rows are skipped and listed; if a database error happens nothing is imported.</p></div></body></html>
+<?php cr_layout_start('Import data'); ?>
+<?= cr_page_header('Import data', 'Add many customers or cars at once from a CSV file.'); ?>
+<?= cr_alerts($msg, $error); ?>
+<?php if ($rowErrors): ?>
+<?php
+    $skippedHtml = '<strong>Skipped rows' . h(count($rowErrors) > CR_IMPORT_SHOW_ERRORS ? ' (first ' . CR_IMPORT_SHOW_ERRORS . ' of ' . count($rowErrors) . ')' : '') . ':</strong><ul class="mb-0">';
+    foreach (array_slice($rowErrors, 0, CR_IMPORT_SHOW_ERRORS) as $re) $skippedHtml .= '<li>' . h($re) . '</li>';
+    $skippedHtml .= '</ul>';
+?>
+<?= cr_alert('warning', $skippedHtml, true); ?>
+<?php endif; ?>
+
+<div class="grid grid-2">
+    <form method="POST" enctype="multipart/form-data" class="card">
+        <h2 class="section-title">Upload a file</h2>
+        <div class="form-grid">
+            <div class="field span-all">
+                <label for="type">Import type <span class="req">*</span></label>
+                <select id="type" name="type" required><option value="customers">Customers CSV</option><option value="cars">Cars CSV</option></select>
+            </div>
+            <div class="field span-all">
+                <label for="csv_file">CSV file <span class="req">*</span></label>
+                <input type="file" id="csv_file" name="csv_file" accept=".csv,text/csv" required>
+                <span class="hint">Comma or semicolon separated, maximum 2 MB and <?= (int)CR_IMPORT_MAX_ROWS ?> rows.</span>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit"><?= cr_icon('upload'); ?> Import</button>
+        </div>
+    </form>
+
+    <div class="card">
+        <h2 class="section-title">Required CSV headers</h2>
+        <dl class="details">
+            <dt>Customers</dt>
+            <dd><code>full_name</code>, <code>phone_number</code>, <code>license_no</code><span class="cell-sub">email optional but must be valid</span></dd>
+            <dt>Cars</dt>
+            <dd><code>reg_no</code>, <code>make</code>, <code>model</code>, <code>year</code>, <code>price_per_day</code><span class="cell-sub">status optional: Available or Maintenance</span></dd>
+        </dl>
+        <p class="muted small mt-4 mb-0">Invalid or duplicate rows are skipped and listed. If a database error happens, nothing is imported.</p>
+    </div>
+</div>
+<?php cr_layout_end(); ?>

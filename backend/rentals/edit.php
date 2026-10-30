@@ -176,111 +176,102 @@ $carStmt->execute();
 $cars = $carStmt->get_result();
 $carStmt->close();
 ?>
+<?php cr_layout_start('Edit rental'); ?>
+<a class="back-link" href="manage.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All rentals</a>
+<?= cr_page_header('Edit rental #' . $id, 'Change the customer, car, dates or status of this rental.'); ?>
+<?= cr_alerts($msg, $error); ?>
 
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Edit Rental</title>
-    <link rel="stylesheet" href="/../backend/includes/css/header.css">
-    <link rel="stylesheet" href="/../backend/includes/css/dashboard.css">
-    <link rel="stylesheet" href="/../backend/includes/css/common.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body>
-<?php
-include __DIR__ . '/../includes/header.php';
-include __DIR__ . '/../includes/leftsidebar.php';
-?>
+<form method="POST" class="card">
+    <div class="form-grid">
+        <div class="field">
+            <label for="customer_id">Customer <span class="req">*</span></label>
+            <select name="customer_id" id="customer_id" onchange="updateCost()" required>
+                <option value="">Select customer</option>
+                <?php while($c = $customers->fetch_assoc()): ?>
+                    <option value="<?= h($c['id']) ?>" data-completed="<?= h($c['completed_rentals']) ?>" <?= $form['customer_id'] === (int)$c['id'] ? 'selected' : '' ?>>
+                        <?= h($c['full_name']) ?>
+                    </option>
+                <?php endwhile; ?>
+            </select>
+        </div>
+        <div class="field">
+            <label for="cars_id">Car <span class="req">*</span></label>
+            <select name="cars_id" id="cars_id" onchange="updateCost()" required>
+                <option value="">Select car</option>
+                <?php while($car = $cars->fetch_assoc()): ?>
+                    <option value="<?= h($car['id']) ?>" data-price="<?= h($car['price_per_day']) ?>"
+                        <?= $form['cars_id'] === (int)$car['id'] ? 'selected' : '' ?>>
+                        <?= h(trim(($car['make_name'] ?? '') . ' ' . ($car['model_name'] ?? '') . ' ' . ($car['car_year'] ?? '') . ' - ' . $car['reg_no']) . ' [' . $car['availability_status'] . ']' . ((int)$car['id'] === $currentCarId ? ' (current)' : '')) ?>
+                    </option>
+                <?php endwhile; ?>
+            </select>
+        </div>
+        <div class="field">
+            <label for="start_date">Start date <span class="req">*</span></label>
+            <input type="date" id="start_date" name="start_date" value="<?= h($form['start_date']) ?>" onchange="updateCost()" required>
+        </div>
+        <div class="field">
+            <label for="end_date">End date <span class="req">*</span></label>
+            <input type="date" id="end_date" name="end_date" value="<?= h($form['end_date']) ?>" onchange="updateCost()" required>
+        </div>
+        <div class="field">
+            <label for="status">Status <span class="req">*</span></label>
+            <select name="status" id="status" required>
+                <?php foreach ($allowed_statuses as $s): ?>
+                    <option value="<?= h($s) ?>" <?= $form['status'] === $s ? 'selected' : '' ?>><?= h($s) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <span class="hint">Future rentals stay Pending until their start date. To finish a rental, use "Confirm return" on the rentals list.</span>
+        </div>
+        <div class="field">
+            <label for="total_cost">Estimated cost</label>
+            <input type="text" id="total_cost" value="<?= h(money_text((float)$rental['total_cost'])) ?>" readonly>
+            <span class="hint">The final amount is calculated when you save.</span>
+        </div>
+    </div>
 
-<div class="content-page">
-    <h2>Edit Rental</h2>
+    <div class="form-actions">
+        <button type="submit"><?= cr_icon('check'); ?> Save changes</button>
+        <a class="btn btn-secondary" href="manage.php">Cancel</a>
+    </div>
+</form>
 
-    <?php if($msg) echo "<p style='color:green;'>" . h($msg) . "</p>"; ?>
-    <?php if($error) echo "<p style='color:red;'>" . h($error) . "</p>"; ?>
+<script>
+const MONEY = <?= cr_money_js_config() ?>;
+function fmtMoney(n){const neg=n<0;n=Math.abs(n);let [i,f]=n.toFixed(MONEY.decimals).split('.');i=i.replace(/\B(?=(\d{3})+(?!\d))/g,MONEY.thou);const num=f?i+MONEY.dec+f:i;const out=MONEY.position==='after'?num+' '+MONEY.symbol:MONEY.symbol+(MONEY.symbol.length>1?' ':'')+num;return (neg?'-':'')+out;}
+const loyaltyMinRentals = <?= (int)loyalty_min_rentals() ?>;
+const loyaltyDiscountRate = <?= json_encode(loyalty_discount_fraction()) ?>;
+function updateCost() {
+    const carSelect = document.getElementById('cars_id');
+    const custSelect = document.getElementById('customer_id');
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    const costInput = document.getElementById('total_cost');
 
-    <form method="POST">
-        <label>Customer:</label><br>
-        <select name="customer_id" id="customer_id" onchange="updateCost()" required>
-            <option value="">Select Customer</option>
-            <?php while($c = $customers->fetch_assoc()): ?>
-                <option value="<?= h($c['id']) ?>" data-completed="<?= h($c['completed_rentals']) ?>" <?= $form['customer_id'] === (int)$c['id'] ? 'selected' : '' ?>>
-                    <?= h($c['full_name']) ?>
-                </option>
-            <?php endwhile; ?>
-        </select><br><br>
-
-        <label>Car:</label><br>
-        <select name="cars_id" id="cars_id" onchange="updateCost()" required>
-            <option value="">Select Car</option>
-            <?php while($car = $cars->fetch_assoc()): ?>
-                <option value="<?= h($car['id']) ?>" data-price="<?= h($car['price_per_day']) ?>"
-                    <?= $form['cars_id'] === (int)$car['id'] ? 'selected' : '' ?>>
-                    <?= h(trim(($car['make_name'] ?? '') . ' ' . ($car['model_name'] ?? '') . ' ' . ($car['car_year'] ?? '') . ' - ' . $car['reg_no']) . ' [' . $car['availability_status'] . ']' . ((int)$car['id'] === $currentCarId ? ' (current)' : '')) ?>
-                </option>
-            <?php endwhile; ?>
-        </select><br><br>
-
-        <label>Start Date:</label><br>
-        <input type="date" id="start_date" name="start_date" value="<?= h($form['start_date']) ?>" onchange="updateCost()" required><br><br>
-
-        <label>End Date:</label><br>
-        <input type="date" id="end_date" name="end_date" value="<?= h($form['end_date']) ?>" onchange="updateCost()" required><br><br>
-
-        <label>Cost (final amount is calculated on save):</label><br>
-        <input type="text" id="total_cost" value="<?= h(money_text((float)$rental['total_cost'])) ?>" readonly><br><br>
-
-        <script>
-        const MONEY = <?= cr_money_js_config() ?>;
-        function fmtMoney(n){const neg=n<0;n=Math.abs(n);let [i,f]=n.toFixed(MONEY.decimals).split('.');i=i.replace(/\B(?=(\d{3})+(?!\d))/g,MONEY.thou);const num=f?i+MONEY.dec+f:i;const out=MONEY.position==='after'?num+' '+MONEY.symbol:MONEY.symbol+(MONEY.symbol.length>1?' ':'')+num;return (neg?'-':'')+out;}
-        const loyaltyMinRentals = <?= (int)loyalty_min_rentals() ?>;
-        const loyaltyDiscountRate = <?= json_encode(loyalty_discount_fraction()) ?>;
-        function updateCost() {
-            const carSelect = document.getElementById('cars_id');
-            const custSelect = document.getElementById('customer_id');
-            const startDate = document.getElementById('start_date').value;
-            const endDate = document.getElementById('end_date').value;
-            const costInput = document.getElementById('total_cost');
-
-            if (!carSelect.value || !custSelect.value || !startDate || !endDate) {
-                costInput.value = '';
-                return;
-            }
-            const pricePerDay = parseFloat(carSelect.options[carSelect.selectedIndex].dataset.price);
-            if (isNaN(pricePerDay)) {
-                costInput.value = '';
-                return;
-            }
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-            if (end < start) {
-                alert("End date cannot be before start date");
-                costInput.value = '';
-                return;
-            }
-            const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)));
-            const completed = parseInt(custSelect.options[custSelect.selectedIndex].dataset.completed || '0', 10);
-            const rate = completed >= loyaltyMinRentals ? loyaltyDiscountRate : 0;
-            const subtotal = pricePerDay * days;
-            const discount = subtotal * rate;
-            const total = Math.max(0, subtotal - discount);
-            costInput.value = fmtMoney(total) + (discount > 0 ? ' (incl. loyalty discount ' + fmtMoney(discount) + ')' : '');
-        }
-        window.onload = updateCost;
-        </script>
-
-        <label>Status:</label><br>
-        <select name="status" required>
-            <?php foreach ($allowed_statuses as $s): ?>
-                <option value="<?= h($s) ?>" <?= $form['status'] === $s ? 'selected' : '' ?>><?= h($s) ?></option>
-            <?php endforeach; ?>
-        </select><br>
-        <small>Future rentals are kept as Pending until their start date. To finish a rental, use "Confirm return" on the Rentals list.</small><br><br>
-
-        <button type="submit">Update Rental</button>
-    </form>
-
-    <a href="manage.php">Back to Rentals</a>
-</div>
-</body>
-</html>
+    if (!carSelect.value || !custSelect.value || !startDate || !endDate) {
+        costInput.value = '';
+        return;
+    }
+    const pricePerDay = parseFloat(carSelect.options[carSelect.selectedIndex].dataset.price);
+    if (isNaN(pricePerDay)) {
+        costInput.value = '';
+        return;
+    }
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (end < start) {
+        alert("End date cannot be before start date");
+        costInput.value = '';
+        return;
+    }
+    const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)));
+    const completed = parseInt(custSelect.options[custSelect.selectedIndex].dataset.completed || '0', 10);
+    const rate = completed >= loyaltyMinRentals ? loyaltyDiscountRate : 0;
+    const subtotal = pricePerDay * days;
+    const discount = subtotal * rate;
+    const total = Math.max(0, subtotal - discount);
+    costInput.value = fmtMoney(total) + (discount > 0 ? ' (incl. loyalty discount ' + fmtMoney(discount) + ')' : '');
+}
+window.addEventListener('load', updateCost);
+</script>
+<?php cr_layout_end(); ?>

@@ -27,4 +27,99 @@ $overdue = $run("SELECT r.id, r.end_date, DATEDIFF(CURDATE(), r.end_date) days_l
 $incidents = $run("SELECT ca.reg_no,COUNT(d.id) damage_count,IFNULL(SUM(COALESCE(d.repair_cost,d.estimated_cost,0)),0) damage_cost FROM car_damages d JOIN cars ca ON d.car_id=ca.id WHERE d.date_reported BETWEEN ? AND ? GROUP BY ca.id,ca.reg_no ORDER BY damage_count DESC", 'ss', [$from, $to]);
 $profit = (float)$payments['paid'] - (float)$expenses['total_expense'];
 ?>
-<!DOCTYPE html><html><head><title>Analytics</title></head><body><?php include __DIR__.'/../includes/header.php'; include __DIR__.'/../includes/leftsidebar.php';?><div class="content-page"><h2>Reporting & Analytics</h2><form method="GET" class="filter-box"><div><label>From</label><input type="date" name="from_date" value="<?=h($from)?>"></div><div><label>To</label><input type="date" name="to_date" value="<?=h($to)?>"></div><button>Apply</button></form><p style="color:#64748b;font-size:13px;">Rentals overlapping <?=h(cr_date($from))?> to <?=h(cr_date($to))?> (canceled excluded). Payments, interest and expenses are counted by their own date.</p><div class="row"><div class="card-box"><p>Rentals</p><h2><?=h($summary['rentals'])?></h2></div><div class="card-box"><p>Rental Revenue</p><h2><?=money((float)$summary['revenue'])?></h2></div><div class="card-box"><p>Late Interest Charged</p><h2><?=money((float)$interest['charged'])?></h2></div><div class="card-box"><p>Payments Collected</p><h2><?=money((float)$payments['paid'])?></h2></div><div class="card-box"><p>Expenses</p><h2><?=money((float)$expenses['total_expense'])?></h2></div><div class="card-box"><p>Estimated Profit (payments - expenses)</p><h2><?=money($profit)?></h2></div></div><h3>Vehicle Utilization & Profitability</h3><table class="table" border="1" cellpadding="10"><tr><th>Car</th><th>Rental Count</th><th>Revenue</th></tr><?php if($util&&$util->num_rows):while($u=$util->fetch_assoc()):?><tr><td><?=h(car_display_name($u))?></td><td><?=h($u['rental_count'])?></td><td><?=money((float)$u['revenue'])?></td></tr><?php endwhile;endif;?></table><h3>Overdue Cars Not Returned (as of today)</h3><table class="table" border="1" cellpadding="10"><tr><th>Rental</th><th>Car</th><th>Customer</th><th>End Date</th><th>Days Late</th></tr><?php if($overdue&&$overdue->num_rows):while($o=$overdue->fetch_assoc()):?><tr><td>#<?=(int)$o['id']?></td><td><?=h(car_display_name($o))?></td><td><?=h($o['full_name'] ?? 'N/A')?></td><td><?=h(cr_date($o['end_date']))?></td><td><?=(int)$o['days_late']?></td></tr><?php endwhile;else:?><tr><td colspan="5">No overdue unreturned cars.</td></tr><?php endif;?></table><h3>Damage Incidents</h3><table class="table" border="1" cellpadding="10"><tr><th>Car</th><th>Damage Count</th><th>Damage Cost</th></tr><?php if($incidents&&$incidents->num_rows):while($i=$incidents->fetch_assoc()):?><tr><td><?=h($i['reg_no'])?></td><td><?=h($i['damage_count'])?></td><td><?=money((float)$i['damage_cost'])?></td></tr><?php endwhile;else:?><tr><td colspan="3">No damage incidents in this period.</td></tr><?php endif;?></table></div></body></html>
+<?php
+$utilRows = $util ? $util->fetch_all(MYSQLI_ASSOC) : [];
+$maxCount = 0;
+foreach ($utilRows as $u) $maxCount = max($maxCount, (int)$u['rental_count']);
+cr_layout_start('Analytics');
+?>
+<?= cr_page_header('Reporting and analytics', 'Revenue, payments, expenses and fleet use for a period.'); ?>
+
+<div class="card">
+    <form method="GET" class="filters mb-0">
+        <div class="field">
+            <label for="from_date">From</label>
+            <input type="date" id="from_date" name="from_date" value="<?= h($from); ?>">
+        </div>
+        <div class="field">
+            <label for="to_date">To</label>
+            <input type="date" id="to_date" name="to_date" value="<?= h($to); ?>">
+        </div>
+        <button type="submit"><?= cr_icon('search'); ?> Apply</button>
+        <a class="btn btn-secondary" href="analytics.php">Clear</a>
+    </form>
+    <p class="hint mb-0">Rentals overlapping <?= h(cr_date($from)); ?> to <?= h(cr_date($to)); ?> (canceled excluded). Payments, interest and expenses are counted by their own date.</p>
+</div>
+
+<div class="stats">
+    <div class="stat"><div class="stat-icon"><?= cr_icon('calendar'); ?></div><div><div class="stat-label">Rentals</div><div class="stat-value"><?= h($summary['rentals']); ?></div></div></div>
+    <div class="stat"><div class="stat-icon"><?= cr_icon('chart'); ?></div><div><div class="stat-label">Rental revenue</div><div class="stat-value"><?= money((float)$summary['revenue']); ?></div></div></div>
+    <div class="stat tone-warning"><div class="stat-icon"><?= cr_icon('clock'); ?></div><div><div class="stat-label">Late interest charged</div><div class="stat-value"><?= money((float)$interest['charged']); ?></div></div></div>
+    <div class="stat tone-success"><div class="stat-icon"><?= cr_icon('wallet'); ?></div><div><div class="stat-label">Payments collected</div><div class="stat-value"><?= money((float)$payments['paid']); ?></div></div></div>
+    <div class="stat tone-danger"><div class="stat-icon"><?= cr_icon('receipt'); ?></div><div><div class="stat-label">Expenses</div><div class="stat-value"><?= money((float)$expenses['total_expense']); ?></div></div></div>
+    <div class="stat tone-purple"><div class="stat-icon"><?= cr_icon('tag'); ?></div><div><div class="stat-label">Estimated profit (payments − expenses)</div><div class="stat-value"><?= money($profit); ?></div></div></div>
+</div>
+
+<div class="card card-flush">
+    <div class="card-head"><h2>Vehicle utilization and profitability</h2></div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Car</th><th class="num">Rentals</th><th style="width:30%"><span class="sr-only">Share of rentals</span></th><th class="num">Revenue</th></tr></thead>
+            <tbody>
+            <?php if ($utilRows): foreach ($utilRows as $u): $pct = $maxCount > 0 ? round((int)$u['rental_count'] / $maxCount * 100) : 0; ?>
+                <tr>
+                    <td><?= h(car_display_name($u)); ?></td>
+                    <td class="num"><?= h($u['rental_count']); ?></td>
+                    <td><div class="progress"><span style="width:<?= (int)$pct; ?>%"></span></div></td>
+                    <td class="num"><?= money((float)$u['revenue']); ?></td>
+                </tr>
+            <?php endforeach; else: ?>
+                <tr><td colspan="4" class="table-empty">No cars yet.</td></tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card card-flush">
+    <div class="card-head"><h2>Overdue cars not returned (as of today)</h2></div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Rental</th><th>Car</th><th>Customer</th><th>End date</th><th class="num">Days late</th></tr></thead>
+            <tbody>
+            <?php if ($overdue && $overdue->num_rows): while ($o = $overdue->fetch_assoc()): ?>
+                <tr>
+                    <td>#<?= (int)$o['id']; ?></td>
+                    <td><?= h(car_display_name($o)); ?></td>
+                    <td><?= h($o['full_name'] ?? 'N/A'); ?></td>
+                    <td class="nowrap"><?= h(cr_date($o['end_date'])); ?></td>
+                    <td class="num"><?= cr_status_badge('Overdue', (int)$o['days_late'] . ' days'); ?></td>
+                </tr>
+            <?php endwhile; else: ?>
+                <tr><td colspan="5" class="table-empty">No overdue unreturned cars.</td></tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card card-flush">
+    <div class="card-head"><h2>Damage incidents</h2></div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Car</th><th class="num">Damages</th><th class="num">Damage cost</th></tr></thead>
+            <tbody>
+            <?php if ($incidents && $incidents->num_rows): while ($i = $incidents->fetch_assoc()): ?>
+                <tr>
+                    <td><span class="plate"><?= h($i['reg_no']); ?></span></td>
+                    <td class="num"><?= h($i['damage_count']); ?></td>
+                    <td class="num"><?= money((float)$i['damage_cost']); ?></td>
+                </tr>
+            <?php endwhile; else: ?>
+                <tr><td colspan="3" class="table-empty">No damage incidents in this period.</td></tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+<?php cr_layout_end(); ?>

@@ -48,15 +48,88 @@ if ($stmt) {
 }
 $today = cr_today();
 ?>
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Active Rentals</title>
-<link rel="stylesheet" href="/../backend/includes/css/header.css"><link rel="stylesheet" href="/../backend/includes/css/dashboard.css"><link rel="stylesheet" href="/../backend/includes/css/common.css"><link rel="stylesheet" href="/../backend/includes/css/all_cars.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><style>.badge-action{background:#fef3c7;color:#92400e;padding:4px 8px;border-radius:999px;font-weight:bold}.badge-danger{background:#fee2e2;color:#991b1b}.filter-box{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin:12px 0;display:flex;gap:10px;align-items:end;flex-wrap:wrap}.return-form{display:flex;gap:4px;flex-wrap:wrap}.return-form input{width:90px;padding:4px}.return-form button{padding:5px 8px;border:0;border-radius:3px;background:#16a34a;color:#fff;cursor:pointer}.success-msg{color:green;font-weight:700;margin:10px 0}.error-msg{color:#b91c1c;font-weight:700;margin:10px 0}</style>
-</head><body><?php include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/leftsidebar.php'; ?>
-<div class="content-page"><h2>Active Rentals</h2><?php if ($msg): ?><p class="success-msg"><?= h($msg); ?></p><?php endif; ?><?php if ($error): ?><p class="error-msg"><?= h($error); ?></p><?php endif; ?><form method="GET" class="filter-box"><div><label>Search by registration number / customer:</label><br><input type="text" name="q" value="<?= h($q); ?>" placeholder="Example: 34 ABC 123"></div><div><button type="submit" class="btn btn-primary">Search</button> <a href="active.php" class="btn btn-danger">Clear</a></div></form>
-<table border="1" cellpadding="10"><tr><th>#</th><th>Customer</th><th>Car</th><th>Registration No</th><th>Start Date</th><th>End Date</th><th>Cost</th><th>Status</th><th>Action</th></tr>
-<?php if($result && $result->num_rows > 0): $count = $pg['offset'] + 1; ?><?php while($row = $result->fetch_assoc()): ?>
-<?php $carName = trim(($row['make_name'] ?? '') . ' ' . ($row['model_name'] ?? '') . ' ' . ($row['car_year'] ?? '')); $overdue = $row['end_date'] < $today; ?>
-<tr><td><?= $count++ ?></td><td><?= h($row['customer_name']) ?></td><td><?= h($carName !== '' ? $carName : $row['car_reg']) ?></td><td><?= h($row['car_reg']) ?></td><td><?= h(cr_date($row['start_date'])) ?></td><td><?= h(cr_date($row['end_date'])) ?></td><td><?= money((float)$row['total_cost']) ?></td>
-<td><?php if($overdue): ?><span class="badge-action badge-danger">Overdue – not returned</span><?php elseif($row['end_date'] === $today): ?><span class="badge-action">Due back today</span><?php else: ?><?= h($row['rental_status']) ?><?php endif; ?></td>
-<td><form method="POST" action="manage.php" class="return-form" onsubmit="return confirm('Confirm that the car of rental #<?= (int)$row['id'] ?> has been returned?')"><input type="hidden" name="back" value="active.php"><input type="hidden" name="rental_id" value="<?= (int)$row['id'] ?>"><input type="text" inputmode="numeric" name="return_mileage" placeholder="Mileage"><input type="text" name="return_notes" placeholder="Notes" maxlength="1000"><button type="submit" name="confirm_return" value="1">Confirm return</button></form></td></tr>
-<?php endwhile; ?><?php else: ?><tr><td colspan="9" class="text-center">No rentals are out right now.</td></tr><?php endif; ?></table><?= cr_pagination($pg); ?><a href="manage.php">Back to All Rentals</a></div></body></html>
+<?php
+// Small page styles for the collapsible "Confirm return" form in table rows.
+$returnFormStyle = '<style>
+.return-box { display: inline-block; vertical-align: top; }
+.return-box > summary { list-style: none; }
+.return-box > summary::-webkit-details-marker { display: none; }
+.return-box[open] > summary { background: var(--surface-3); color: var(--text); border-color: var(--border-strong); }
+.return-form { display: grid; gap: 4px; width: 230px; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); white-space: normal; text-align: left; }
+.return-form label { margin: 4px 0 0; font-size: 12.5px; }
+.return-form input { min-height: 32px !important; padding: 4px 8px !important; font-size: 13.5px !important; }
+.return-form button { margin-top: 6px; }
+.card-head > .filters { flex: 1; }
+</style>';
+?>
+<?php cr_layout_start('Active rentals', ['head' => $returnFormStyle]); ?>
+<?= cr_page_header('Active rentals', 'Cars that are out with customers right now. Confirm the return when a car comes back.', '<a class="btn btn-secondary" href="manage.php">' . cr_icon('list') . ' All rentals</a>'); ?>
+<?= cr_alerts($msg, $error); ?>
+
+<div class="card card-flush">
+    <div class="card-head">
+        <form method="GET" class="filters mb-0">
+            <div class="field grow">
+                <label for="q">Search</label>
+                <input type="text" id="q" name="q" value="<?= h($q); ?>" placeholder="Reg no, customer, make or model">
+            </div>
+            <button type="submit"><?= cr_icon('search'); ?> Filter</button>
+            <a class="btn btn-secondary" href="active.php">Clear</a>
+        </form>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Customer</th>
+                    <th>Car</th>
+                    <th>Start date</th>
+                    <th>End date</th>
+                    <th class="num">Cost</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php if($result && $result->num_rows > 0): $count = $pg['offset'] + 1; ?>
+                <?php while($row = $result->fetch_assoc()): ?>
+                <?php $carName = trim(($row['make_name'] ?? '') . ' ' . ($row['model_name'] ?? '') . ' ' . ($row['car_year'] ?? '')); $overdue = $row['end_date'] < $today; ?>
+                <tr>
+                    <td class="muted"><?= $count++ ?></td>
+                    <td><span class="cell-title"><?= h($row['customer_name']) ?></span><span class="cell-sub">Rental #<?= (int)$row['id'] ?></span></td>
+                    <td><?= h($carName !== '' ? $carName : $row['car_reg']) ?><span class="cell-sub"><span class="plate"><?= h($row['car_reg']) ?></span></span></td>
+                    <td class="nowrap"><?= h(cr_date($row['start_date'])) ?></td>
+                    <td class="nowrap<?= $overdue ? ' text-danger' : '' ?>"><?= h(cr_date($row['end_date'])) ?></td>
+                    <td class="num"><?= money((float)$row['total_cost']) ?></td>
+                    <td>
+                        <?php if($overdue): ?><?= cr_status_badge('Overdue', 'Overdue – not returned') ?>
+                        <?php elseif($row['end_date'] === $today): ?><?= cr_status_badge('Due', 'Due back today') ?>
+                        <?php else: ?><?= cr_status_badge($row['rental_status']) ?><?php endif; ?>
+                    </td>
+                    <td class="actions-cell">
+                        <details class="return-box">
+                            <summary class="btn btn-sm btn-success"><?= cr_icon('check', 'icon-sm') ?> Confirm return</summary>
+                            <form method="POST" action="manage.php" class="return-form" onsubmit="return confirm('Confirm that the car of rental #<?= (int)$row['id'] ?> has been returned?')">
+                                <input type="hidden" name="back" value="active.php">
+                                <input type="hidden" name="rental_id" value="<?= (int)$row['id'] ?>">
+                                <label for="return_mileage_<?= (int)$row['id'] ?>">Return mileage <span class="opt">(optional)</span></label>
+                                <input type="text" inputmode="numeric" id="return_mileage_<?= (int)$row['id'] ?>" name="return_mileage" placeholder="Mileage">
+                                <label for="return_notes_<?= (int)$row['id'] ?>">Notes <span class="opt">(optional)</span></label>
+                                <input type="text" id="return_notes_<?= (int)$row['id'] ?>" name="return_notes" placeholder="Notes" maxlength="1000">
+                                <button type="submit" name="confirm_return" value="1" class="btn btn-sm btn-success">Confirm return</button>
+                            </form>
+                        </details>
+                    </td>
+                </tr>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <tr><td colspan="8" class="table-empty">No rentals are out right now.</td></tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+    <?= cr_pagination($pg); ?>
+</div>
+<?php cr_layout_end(); ?>
 <?php if($result) $result->free(); $conn->close(); ?>

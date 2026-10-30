@@ -242,17 +242,126 @@ if ($stmt) {
     $stmt->close();
 }
 ?>
-<!DOCTYPE html><html><head><title>Reservations & Waitlist</title></head><body><?php include __DIR__.'/../includes/header.php'; include __DIR__.'/../includes/leftsidebar.php'; ?>
-<div class="content-page"><h2>Reservations & Waitlist</h2>
-<?php if($msg): ?><p class="success-msg"><?= h($msg); ?></p><?php endif; ?><?php if($error): ?><p class="error-msg"><?= h($error); ?></p><?php endif; ?>
-<div class="card-box"><h3>Create Office Reservation</h3><form method="POST" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;align-items:end;">
-<div><label>Customer</label><select name="customer_id" required><option value="">Select</option><?php while($c=$customers->fetch_assoc()): ?><option value="<?= h($c['id']); ?>" <?= (int)$c['id'] === $form['customer_id'] ? 'selected' : ''; ?>><?= h($c['full_name'].' - '.$c['phone_number']); ?></option><?php endwhile; ?></select></div>
-<div><label>Car</label><select name="car_id" required><option value="">Select</option><?php while($car=$cars->fetch_assoc()): ?><option value="<?= h($car['id']); ?>" <?= (int)$car['id'] === $form['car_id'] ? 'selected' : ''; ?>><?= h(car_display_name($car).' ['.$car['availability_status'].']'); ?></option><?php endwhile; ?></select></div>
-<div><label>Pickup Date</label><input type="date" name="pickup_date" min="<?= h(cr_today()); ?>" value="<?= h($form['pickup_date']); ?>" required></div><div><label>Dropoff Date</label><input type="date" name="dropoff_date" min="<?= h(cr_today()); ?>" value="<?= h($form['dropoff_date']); ?>" required></div>
-<div><label>Pickup Location</label><input type="text" name="pickup_location" value="<?= h($form['pickup_location']); ?>"></div><div><label>Dropoff Location</label><input type="text" name="dropoff_location" value="<?= h($form['dropoff_location']); ?>"></div>
-<div><label>Status</label><select name="status"><?php foreach(['Confirmed','Pending'] as $s): ?><option value="<?= h($s); ?>" <?= $form['status']===$s?'selected':''; ?>><?= h($s); ?></option><?php endforeach; ?></select></div>
-<div style="grid-column:1/-1"><label>Notes</label><textarea name="notes" rows="2"><?= h($form['notes']); ?></textarea></div><div><button type="submit" name="save_reservation">Save Reservation</button></div></form></div>
-<form method="GET" class="filter-box"><div><label>Search</label><input type="text" name="q" value="<?= h($q); ?>" placeholder="Customer / reg no / phone"></div><div><label>Status</label><select name="status"><option value="">All</option><?php foreach($allStatuses as $s): ?><option <?= $status===$s?'selected':''; ?>><?= h($s); ?></option><?php endforeach; ?></select></div><button>Filter</button><a href="manage.php" class="btn btn-danger">Clear</a> <a href="booking_link.php" class="btn btn-success">Send Booking Link</a> <a href="online_booking.php" class="btn btn-primary" target="_blank">Public Booking Form</a></form>
-<div class="table-responsive"><table class="table" border="1" cellpadding="10"><tr><th>#</th><th>Customer</th><th>Car</th><th>Dates</th><th>Locations</th><th>Source</th><th>Status</th><th>Actions</th></tr>
-<?php if($list && $list->num_rows): while($r=$list->fetch_assoc()): ?><tr><td><?= h($r['id']); ?></td><td><?= h($r['display_customer'] ?: 'Public request'); ?><?php if(!$r['customer_id']): ?> <small>(not linked to a customer)</small><?php endif; ?><br><small><?= h($r['phone_number'] ?? ''); ?></small><?php if(!$r['customer_id'] && !empty($r['email'])): ?><br><small><?= h($r['email']); ?></small><?php endif; ?></td><td><?= h(car_display_name($r)); ?></td><td><?= h(cr_date($r['pickup_date'])) ?> to <?= h(cr_date($r['dropoff_date'])) ?></td><td><?= h($r['pickup_location']); ?><br><?= h($r['dropoff_location']); ?></td><td><?= h($r['source']); ?></td><td><strong><?= h($r['status']); ?></strong></td><td><?php if(!in_array($r['status'],['Cancelled','Converted'],true)): ?><a class="btn <?= $r['customer_id'] ? 'btn-secondary' : 'btn-warning'; ?>" href="link.php?id=<?= (int)$r['id']; ?>"><?= $r['customer_id'] ? 'Change customer' : 'Link customer'; ?></a><?php endif; ?><?php if(in_array($r['status'],['Waitlisted','Pending'],true)): ?><a class="btn btn-success" href="<?= h(stock_action_url('manage.php?action=confirm&id=' . (int)$r['id'])); ?>">Confirm</a><?php endif; ?><?php if(in_array($r['status'],['Confirmed','Pending'],true)): ?><a class="btn btn-primary" href="<?= h(stock_action_url('manage.php?action=convert&id=' . (int)$r['id'])); ?>">Convert to Rental</a><?php endif; ?><?php if(!in_array($r['status'],['Cancelled','Converted'],true)): ?><a class="btn btn-danger" onclick="return confirm('Cancel reservation?')" href="<?= h(stock_action_url('manage.php?action=cancel&id=' . (int)$r['id'])); ?>">Cancel</a><?php endif; ?></td></tr><?php endwhile; else: ?><tr><td colspan="8">No reservations found.</td></tr><?php endif; ?></table></div><?= cr_pagination($pg); ?>
-</div></body></html>
+<?php cr_layout_start('Reservations and waitlist'); ?>
+<?= cr_page_header('Reservations and waitlist', 'Book cars ahead of time, handle online requests and turn reservations into rentals.',
+    '<a href="booking_link.php" class="btn btn-success">' . cr_icon('whatsapp') . ' Send booking link</a>'
+    . '<a href="online_booking.php" class="btn btn-secondary" target="_blank" rel="noopener">' . cr_icon('external') . ' Public booking form</a>'); ?>
+<?= cr_alerts($msg, $error); ?>
+
+<form method="POST" class="card">
+    <h2 class="section-title">New office reservation</h2>
+    <div class="form-grid">
+        <div class="field">
+            <label for="customer_id">Customer <span class="req">*</span></label>
+            <select id="customer_id" name="customer_id" required>
+                <option value="">Select a customer</option>
+                <?php while ($c = $customers->fetch_assoc()): ?>
+                    <option value="<?= h($c['id']); ?>" <?= (int)$c['id'] === $form['customer_id'] ? 'selected' : ''; ?>><?= h($c['full_name'] . ' - ' . $c['phone_number']); ?></option>
+                <?php endwhile; ?>
+            </select>
+        </div>
+        <div class="field">
+            <label for="car_id">Car <span class="req">*</span></label>
+            <select id="car_id" name="car_id" required>
+                <option value="">Select a car</option>
+                <?php while ($car = $cars->fetch_assoc()): ?>
+                    <option value="<?= h($car['id']); ?>" <?= (int)$car['id'] === $form['car_id'] ? 'selected' : ''; ?>><?= h(car_display_name($car) . ' [' . $car['availability_status'] . ']'); ?></option>
+                <?php endwhile; ?>
+            </select>
+        </div>
+        <div class="field">
+            <label for="pickup_date">Pickup date <span class="req">*</span></label>
+            <input type="date" id="pickup_date" name="pickup_date" min="<?= h(cr_today()); ?>" value="<?= h($form['pickup_date']); ?>" required>
+        </div>
+        <div class="field">
+            <label for="dropoff_date">Dropoff date <span class="req">*</span></label>
+            <input type="date" id="dropoff_date" name="dropoff_date" min="<?= h(cr_today()); ?>" value="<?= h($form['dropoff_date']); ?>" required>
+        </div>
+        <div class="field">
+            <label for="pickup_location">Pickup location <span class="opt">(optional)</span></label>
+            <input type="text" id="pickup_location" name="pickup_location" value="<?= h($form['pickup_location']); ?>">
+        </div>
+        <div class="field">
+            <label for="dropoff_location">Dropoff location <span class="opt">(optional)</span></label>
+            <input type="text" id="dropoff_location" name="dropoff_location" value="<?= h($form['dropoff_location']); ?>">
+        </div>
+        <div class="field">
+            <label for="res_status">Status</label>
+            <select id="res_status" name="status">
+                <?php foreach (['Confirmed', 'Pending'] as $s): ?>
+                    <option value="<?= h($s); ?>" <?= $form['status'] === $s ? 'selected' : ''; ?>><?= h($s); ?></option>
+                <?php endforeach; ?>
+            </select>
+            <span class="hint">If the car is not free on these dates, the reservation goes to the waitlist.</span>
+        </div>
+        <div class="field span-all">
+            <label for="notes">Notes <span class="opt">(optional)</span></label>
+            <textarea id="notes" name="notes" rows="2"><?= h($form['notes']); ?></textarea>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button type="submit" name="save_reservation"><?= cr_icon('check'); ?> Save reservation</button>
+    </div>
+</form>
+
+<div class="card">
+    <div class="card-head"><h2>All reservations</h2></div>
+    <form method="GET" class="filters">
+        <div class="field grow">
+            <label for="q">Search</label>
+            <input type="search" id="q" name="q" value="<?= h($q); ?>" placeholder="Customer, reg no or phone">
+        </div>
+        <div class="field">
+            <label for="status_filter">Status</label>
+            <select id="status_filter" name="status">
+                <option value="">All</option>
+                <?php foreach ($allStatuses as $s): ?><option <?= $status === $s ? 'selected' : ''; ?>><?= h($s); ?></option><?php endforeach; ?>
+            </select>
+        </div>
+        <button type="submit"><?= cr_icon('search'); ?> Filter</button>
+        <a href="manage.php" class="btn btn-secondary">Clear</a>
+    </form>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>#</th><th>Customer</th><th>Car</th><th>Dates</th><th>Locations</th><th>Source</th><th>Status</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+            <?php if ($list && $list->num_rows): while ($r = $list->fetch_assoc()): ?>
+                <tr>
+                    <td class="muted"><?= h($r['id']); ?></td>
+                    <td>
+                        <span class="cell-title"><?= h($r['display_customer'] ?: 'Public request'); ?></span>
+                        <?php if (!$r['customer_id']): ?><span class="cell-sub text-warning">Not linked to a customer</span><?php endif; ?>
+                        <?php if (!empty($r['phone_number'])): ?><span class="cell-sub"><?= h($r['phone_number']); ?></span><?php endif; ?>
+                        <?php if (!$r['customer_id'] && !empty($r['email'])): ?><span class="cell-sub"><?= h($r['email']); ?></span><?php endif; ?>
+                    </td>
+                    <td><?= h(car_display_name(array_merge($r, ['reg_no' => '']))); ?><?php if (!empty($r['reg_no'])): ?><span class="cell-sub"><span class="plate"><?= h($r['reg_no']); ?></span></span><?php endif; ?></td>
+                    <td class="nowrap"><?= h(cr_date($r['pickup_date'])) ?><span class="cell-sub">to <?= h(cr_date($r['dropoff_date'])) ?></span></td>
+                    <td><?= h($r['pickup_location']); ?><?php if ((string)$r['dropoff_location'] !== ''): ?><span class="cell-sub"><?= h($r['dropoff_location']); ?></span><?php endif; ?></td>
+                    <td><?= cr_status_badge((string)$r['source']); ?></td>
+                    <td><?= cr_status_badge((string)$r['status']); ?></td>
+                    <td><div class="actions">
+                        <?php if (!in_array($r['status'], ['Cancelled', 'Converted'], true)): ?>
+                            <a class="btn btn-sm <?= $r['customer_id'] ? 'btn-secondary' : 'btn-warning'; ?>" href="link.php?id=<?= (int)$r['id']; ?>"><?= cr_icon('link', 'icon-sm'); ?> <?= $r['customer_id'] ? 'Change customer' : 'Link customer'; ?></a>
+                        <?php endif; ?>
+                        <?php if (in_array($r['status'], ['Waitlisted', 'Pending'], true)): ?>
+                            <a class="btn btn-sm btn-success" href="<?= h(stock_action_url('manage.php?action=confirm&id=' . (int)$r['id'])); ?>"><?= cr_icon('check', 'icon-sm'); ?> Confirm</a>
+                        <?php endif; ?>
+                        <?php if (in_array($r['status'], ['Confirmed', 'Pending'], true)): ?>
+                            <a class="btn btn-sm" href="<?= h(stock_action_url('manage.php?action=convert&id=' . (int)$r['id'])); ?>">Convert to rental</a>
+                        <?php endif; ?>
+                        <?php if (!in_array($r['status'], ['Cancelled', 'Converted'], true)): ?>
+                            <a class="btn btn-sm btn-danger" data-confirm="Cancel reservation?" href="<?= h(stock_action_url('manage.php?action=cancel&id=' . (int)$r['id'])); ?>">Cancel</a>
+                        <?php endif; ?>
+                    </div></td>
+                </tr>
+            <?php endwhile; else: ?>
+                <tr><td colspan="8" class="table-empty">No reservations found.</td></tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+    <?= cr_pagination($pg); ?>
+</div>
+<?php cr_layout_end(); ?>

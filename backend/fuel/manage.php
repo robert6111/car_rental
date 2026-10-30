@@ -42,4 +42,71 @@ $cars=$conn->query("SELECT cars.id,cars.reg_no,makes.name AS make_name,models.na
 $pg=cr_page_count($conn,cr_page(),"SELECT COUNT(*) FROM fuel_logs f JOIN cars ca ON f.car_id=ca.id");
 $list=$conn->query("SELECT f.*, ca.reg_no, m.name AS make_name, mo.name AS model_name, y.year AS car_year FROM fuel_logs f JOIN cars ca ON f.car_id=ca.id LEFT JOIN makes m ON ca.make_id=m.id LEFT JOIN models mo ON ca.model_id=mo.id LEFT JOIN car_years y ON ca.year_id=y.id ORDER BY f.log_date DESC,f.id DESC".cr_page_sql($pg));
 ?>
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Fuel & Mileage Tracking</title></head><body><?php include __DIR__.'/../includes/header.php'; include __DIR__.'/../includes/leftsidebar.php';?><div class="content-page"><h2>Fuel & Mileage Tracking</h2><?php if($msg):?><p class="success-msg"><?=h($msg)?></p><?php endif;?><?php if($error):?><p class="error-msg"><?=h($error)?></p><?php endif;?><div class="card-box"><form method="POST" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;align-items:end"><div><label>Car</label><select name="car_id" required><option value="">Select</option><?php while($c=$cars->fetch_assoc()):?><option value="<?=h($c['id'])?>"><?=h(car_display_name($c))?></option><?php endwhile;?></select></div><div><label>Date</label><input type="date" name="log_date" value="<?=h(cr_today())?>" max="<?=h(cr_today())?>" required></div><div><label>Mileage</label><input type="number" name="mileage" min="0" step="1"></div><div><label>Liters</label><input type="number" step="0.01" min="0.01" name="liters" required></div><div><label>Cost</label><input type="number" step="0.01" min="0.01" name="cost" required></div><div><label>Fuel Station</label><input name="fuel_station" maxlength="150"></div><div style="grid-column:1/-1"><label>Notes</label><textarea name="notes"></textarea></div><button>Save Fuel Log</button></form></div><div class="table-responsive"><table class="table" border="1" cellpadding="10"><tr><th>Date</th><th>Car</th><th>Mileage</th><th>Liters</th><th>Cost</th><th>Station</th><th>Notes</th></tr><?php if($list&&$list->num_rows): while($r=$list->fetch_assoc()):?><tr><td><?= h(cr_date($r['log_date'])) ?></td><td><?=h(car_display_name($r))?></td><td><?=h($r['mileage'])?></td><td><?=number_format((float)$r['liters'],2)?></td><td><?=money((float)$r['cost'])?></td><td><?=h($r['fuel_station'])?></td><td><?=h($r['notes'])?></td></tr><?php endwhile;else:?><tr><td colspan="7">No fuel logs yet.</td></tr><?php endif;?></table></div><?= cr_pagination($pg); ?></div></body></html>
+<?php cr_layout_start('Fuel & mileage'); ?>
+<?= cr_page_header('Fuel & mileage', 'Log fuel purchases and keep car mileage up to date.'); ?>
+<?= cr_alerts($msg, $error); ?>
+
+<form method="POST" class="card">
+    <div class="card-head"><h2>Add fuel log</h2></div>
+    <div class="form-grid">
+        <div class="field">
+            <label for="car_id">Car <span class="req">*</span></label>
+            <select id="car_id" name="car_id" required><option value="">Select car</option><?php while ($c = $cars->fetch_assoc()): ?><option value="<?= h($c['id']) ?>"><?= h(car_display_name($c)) ?></option><?php endwhile; ?></select>
+        </div>
+        <div class="field">
+            <label for="log_date">Date <span class="req">*</span></label>
+            <input type="date" id="log_date" name="log_date" value="<?= h(cr_today()) ?>" max="<?= h(cr_today()) ?>" required>
+        </div>
+        <div class="field">
+            <label for="mileage">Mileage <span class="opt">(optional)</span></label>
+            <input type="number" id="mileage" name="mileage" min="0" step="1">
+        </div>
+        <div class="field">
+            <label for="liters">Litres <span class="req">*</span></label>
+            <input type="number" id="liters" step="0.01" min="0.01" name="liters" required>
+        </div>
+        <div class="field">
+            <label for="cost">Cost <span class="req">*</span></label>
+            <input type="number" id="cost" step="0.01" min="0.01" name="cost" required>
+        </div>
+        <div class="field">
+            <label for="fuel_station">Fuel station <span class="opt">(optional)</span></label>
+            <input id="fuel_station" name="fuel_station" maxlength="150">
+        </div>
+        <div class="field span-all">
+            <label for="notes">Notes <span class="opt">(optional)</span></label>
+            <textarea id="notes" name="notes" rows="2"></textarea>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button type="submit"><?= cr_icon('check'); ?> Save fuel log</button>
+    </div>
+</form>
+
+<div class="card card-flush">
+    <div class="card-head"><h2>Fuel logs</h2></div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>Date</th><th>Car</th><th class="num">Mileage</th><th class="num">Litres</th><th class="num">Cost</th><th>Station</th><th>Notes</th></tr>
+            </thead>
+            <tbody>
+            <?php if ($list && $list->num_rows): while ($r = $list->fetch_assoc()): ?>
+                <tr>
+                    <td class="nowrap"><?= h(cr_date($r['log_date'])) ?></td>
+                    <td><?= h(car_display_name($r)) ?></td>
+                    <td class="num"><?= h($r['mileage']) ?></td>
+                    <td class="num"><?= number_format((float)$r['liters'], 2) ?></td>
+                    <td class="num"><?= money((float)$r['cost']) ?></td>
+                    <td><?= h($r['fuel_station']) ?></td>
+                    <td><?= h($r['notes']) ?></td>
+                </tr>
+            <?php endwhile; else: ?>
+                <tr><td colspan="7" class="table-empty">No fuel logs yet.</td></tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+    <?= cr_pagination($pg); ?>
+</div>
+<?php cr_layout_end(); ?>

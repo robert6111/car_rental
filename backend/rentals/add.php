@@ -117,65 +117,98 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-<head>
-    <title>Add Rental</title>
-    <link rel="stylesheet" href="/../backend/includes/css/header.css">
-    <link rel="stylesheet" href="/../backend/includes/css/dashboard.css">
-    <link rel="stylesheet" href="/../backend/includes/css/common.css">
-    <link rel="stylesheet" href="/../backend/includes/css/all_cars.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
-    <style>.pricing-summary{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin:10px 0 18px;max-width:520px;box-shadow:0 4px 12px rgba(15,23,42,.05)}.pricing-summary div{display:flex;justify-content:space-between;gap:12px;margin:4px 0}.discount-line{color:#166534;font-weight:700}</style>
-</head>
-<body>
-<?php include __DIR__ . '/../includes/header.php'; ?>
-<?php include __DIR__ . '/../includes/leftsidebar.php'; ?>
-<div class="content-page">
-    <h2>Add New Rental</h2>
-    <?php if($msg) echo "<p style='color:green;'>" . h($msg) . "</p>"; ?>
-    <?php if($error) echo "<p style='color:red;'>" . h($error) . "</p>"; ?>
+<?php cr_layout_start('New rental', ['head' => '<style>
+.pricing-summary { max-width: 440px; margin-top: 18px; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2); font-size: 14px; }
+.pricing-summary div { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; font-variant-numeric: tabular-nums; }
+.pricing-summary .discount-line { color: var(--success); }
+.pricing-summary .total-line { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 8px; font-size: 15px; }
+</style>']); ?>
+<a class="back-link" href="manage.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All rentals</a>
+<?= cr_page_header('New rental', 'Book a car for a customer. The price is worked out from the dates and the car\'s daily rate.'); ?>
+<?= cr_alerts($msg, $error); ?>
 
-    <form method="POST">
-        <label>Customer:</label><br>
-        <select name="customer_id" id="customer_id" onchange="updateCost()" required>
-            <option value="">Select Customer</option>
-            <?php while($row = $customers->fetch_assoc()): ?>
-                <?php $discountRate = loyalty_discount_rate((int)$row['completed_rentals']); ?>
-                <option value="<?= h($row['id']) ?>" data-completed="<?= h($row['completed_rentals']) ?>" <?= (int)$row['id'] === $form['customer_id'] ? 'selected' : '' ?>>
-                    <?= h($row['full_name']) ?><?= $discountRate > 0 ? ' - Loyal customer discount' : '' ?>
-                </option>
-            <?php endwhile; ?>
-        </select><br><br>
+<form method="POST" class="card">
+    <h2 class="section-title">Customer and car</h2>
+    <div class="form-grid">
+        <div class="field">
+            <label for="customer_id">Customer <span class="req">*</span></label>
+            <select name="customer_id" id="customer_id" onchange="updateCost()" required>
+                <option value="">Select customer</option>
+                <?php while($row = $customers->fetch_assoc()): ?>
+                    <?php $discountRate = loyalty_discount_rate((int)$row['completed_rentals']); ?>
+                    <option value="<?= h($row['id']) ?>" data-completed="<?= h($row['completed_rentals']) ?>" <?= (int)$row['id'] === $form['customer_id'] ? 'selected' : '' ?>>
+                        <?= h($row['full_name']) ?><?= $discountRate > 0 ? ' - Loyal customer discount' : '' ?>
+                    </option>
+                <?php endwhile; ?>
+            </select>
+        </div>
+        <div class="field">
+            <label for="car_id">Car <span class="req">*</span></label>
+            <select name="car_id" id="car_id" onchange="updateCarDetails()" required>
+                <option value="">Select car</option>
+                <?php while($row = $cars->fetch_assoc()): ?>
+                    <option value="<?= h($row['id']) ?>" data-price="<?= h($row['price_per_day']) ?>" data-make="<?= h($row['make']) ?>" data-model="<?= h($row['model']) ?>" data-reg_no="<?= h($row['reg_no']) ?>" data-year="<?= h($row['year']) ?>" <?= (int)$row['id'] === $form['car_id'] ? 'selected' : '' ?>>
+                        <?= h($row['make'] . ' ' . $row['model'] . ' ' . $row['year'] . ' - ' . $row['reg_no'] . ' [' . $row['availability_status'] . ']') ?>
+                    </option>
+                <?php endwhile; ?>
+            </select>
+            <span class="hint" id="car_details"></span>
+        </div>
+    </div>
 
-        <label>Car:</label><br>
-        <select name="car_id" id="car_id" onchange="updateCarDetails()" required>
-            <option value="">Select Car</option>
-            <?php while($row = $cars->fetch_assoc()): ?>
-                <option value="<?= h($row['id']) ?>" data-price="<?= h($row['price_per_day']) ?>" data-make="<?= h($row['make']) ?>" data-model="<?= h($row['model']) ?>" data-reg_no="<?= h($row['reg_no']) ?>" data-year="<?= h($row['year']) ?>" <?= (int)$row['id'] === $form['car_id'] ? 'selected' : '' ?>>
-                    <?= h($row['make'] . ' ' . $row['model'] . ' ' . $row['year'] . ' - ' . $row['reg_no'] . ' [' . $row['availability_status'] . ']') ?>
-                </option>
-            <?php endwhile; ?>
-        </select>
-        <div id="car_details" style="margin-top: 10px; font-weight: bold;"></div><br>
+    <div class="form-section">
+        <h3>Dates and places</h3>
+        <div class="form-grid">
+            <div class="field">
+                <label for="start_date">Start date <span class="req">*</span></label>
+                <input type="date" name="start_date" id="start_date" min="<?= h(cr_today()) ?>" value="<?= h($form['start_date']) ?>" onchange="updateCost()" required>
+            </div>
+            <div class="field">
+                <label for="end_date">End date <span class="req">*</span></label>
+                <input type="date" name="end_date" id="end_date" min="<?= h(cr_today()) ?>" value="<?= h($form['end_date']) ?>" onchange="updateCost()" required>
+            </div>
+            <div class="field">
+                <label for="pickup_location">Pickup location <span class="opt">(optional)</span></label>
+                <input type="text" name="pickup_location" id="pickup_location" maxlength="255" placeholder="Office / airport / hotel" value="<?= h($form['pickup_location']) ?>">
+            </div>
+            <div class="field">
+                <label for="dropoff_location">Drop-off location <span class="opt">(optional)</span></label>
+                <input type="text" name="dropoff_location" id="dropoff_location" maxlength="255" placeholder="Office / airport / hotel" value="<?= h($form['dropoff_location']) ?>">
+            </div>
+        </div>
+    </div>
 
-        <label>Start Date:</label><br><input type="date" name="start_date" id="start_date" min="<?= h(cr_today()) ?>" value="<?= h($form['start_date']) ?>" onchange="updateCost()" required><br><br>
-        <label>End Date:</label><br><input type="date" name="end_date" id="end_date" min="<?= h(cr_today()) ?>" value="<?= h($form['end_date']) ?>" onchange="updateCost()" required><br><br>
-        <label>Pickup Location:</label><br><input type="text" name="pickup_location" placeholder="Office / airport / hotel" value="<?= h($form['pickup_location']) ?>"><br><br>
-        <label>Dropoff Location:</label><br><input type="text" name="dropoff_location" placeholder="Office / airport / hotel" value="<?= h($form['dropoff_location']) ?>"><br><br>
-        <label>Deposit Amount:</label><br><input type="text" inputmode="decimal" name="deposit_amount" value="<?= h($form['deposit_amount']) ?>"><br><br>
-        <label>Notes:</label><br><textarea name="notes" rows="3"><?= h($form['notes']) ?></textarea><br><br>
-
-        <div class="pricing-summary" id="pricing_summary" style="display:none;">
-            <div><span>Rental Days</span><strong id="summary_days">0</strong></div>
-            <div><span>Subtotal</span><strong id="summary_subtotal">-</strong></div>
-            <div class="discount-line"><span>Loyalty Discount</span><strong id="summary_discount">-</strong></div>
-            <div><span>Final Cost</span><strong id="summary_total">-</strong></div>
+    <div class="form-section">
+        <h3>Money and notes</h3>
+        <div class="form-grid">
+            <div class="field">
+                <label for="deposit_amount">Deposit amount</label>
+                <input type="text" inputmode="decimal" name="deposit_amount" id="deposit_amount" value="<?= h($form['deposit_amount']) ?>">
+            </div>
+            <div class="field">
+                <label for="total_cost">Estimated cost</label>
+                <input type="number" step="0.01" id="total_cost" readonly>
+                <span class="hint">The final cost is calculated when you save.</span>
+            </div>
+            <div class="field span-all">
+                <label for="notes">Notes <span class="opt">(optional)</span></label>
+                <textarea name="notes" id="notes" rows="3"><?= h($form['notes']) ?></textarea>
+            </div>
         </div>
 
-        <label>Cost (calculated on save):</label><br><input type="number" step="0.01" id="total_cost" readonly><br><br>
-        <button type="submit">Add Rental</button>
-    </form>
-</div>
+        <div class="pricing-summary" id="pricing_summary" style="display:none;" aria-live="polite">
+            <div><span>Rental days</span><strong id="summary_days">0</strong></div>
+            <div><span>Subtotal</span><strong id="summary_subtotal">-</strong></div>
+            <div class="discount-line"><span>Loyalty discount</span><strong id="summary_discount">-</strong></div>
+            <div class="total-line"><span>Final cost</span><strong id="summary_total">-</strong></div>
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit"><?= cr_icon('check'); ?> Add rental</button>
+        <a class="btn btn-secondary" href="manage.php">Cancel</a>
+    </div>
+</form>
 <script>
 const MONEY = <?= cr_money_js_config() ?>;
 function fmtMoney(n){const neg=n<0;n=Math.abs(n);let [i,f]=n.toFixed(MONEY.decimals).split('.');i=i.replace(/\B(?=(\d{3})+(?!\d))/g,MONEY.thou);const num=f?i+MONEY.dec+f:i;const out=MONEY.position==='after'?num+' '+MONEY.symbol:MONEY.symbol+(MONEY.symbol.length>1?' ':'')+num;return (neg?'-':'')+out;}
@@ -186,4 +219,4 @@ function rentalDays(a,b){const s=new Date(a),e=new Date(b);if(e<s)return 0;retur
 function updateCost(){const car=document.getElementById('car_id'),cust=document.getElementById('customer_id'),start=document.getElementById('start_date').value,end=document.getElementById('end_date').value,input=document.getElementById('total_cost'),sum=document.getElementById('pricing_summary');if(!car.value||!cust.value||!start||!end){input.value='';sum.style.display='none';return;}const days=rentalDays(start,end);if(!days){alert('End date cannot be before start date');input.value='';sum.style.display='none';return;}const price=parseFloat(car.options[car.selectedIndex].dataset.price||'0'),completed=parseInt(cust.options[cust.selectedIndex].dataset.completed||'0',10),rate=completed>=loyaltyMinRentals?loyaltyDiscountRate:0,subtotal=price*days,discount=subtotal*rate,total=Math.max(0,subtotal-discount);input.value=total.toFixed(2);document.getElementById('summary_days').textContent=days;document.getElementById('summary_subtotal').textContent=fmtMoney(subtotal);document.getElementById('summary_discount').textContent=fmtMoney(discount);document.getElementById('summary_total').textContent=fmtMoney(total);sum.style.display='block';}
 document.addEventListener('DOMContentLoaded', updateCarDetails);
 </script>
-</body>
+<?php cr_layout_end(); ?>

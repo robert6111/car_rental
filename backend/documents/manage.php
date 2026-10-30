@@ -36,6 +36,87 @@ $listStmt=$conn->prepare("SELECT d.*, c.full_name, ca.reg_no $docFrom ORDER BY d
 if($types!=='') $listStmt->bind_param($types,...$params);
 $listStmt->execute(); $list=$listStmt->get_result();
 ?>
-<!DOCTYPE html><html><head><title>Document Management</title></head><body><?php include __DIR__.'/../includes/header.php'; include __DIR__.'/../includes/leftsidebar.php'; ?><div class="content-page"><h2>Document Management</h2><p>Store contracts, ID copies, insurance papers, invoices, licenses and other legal documents.</p><?php if($msg):?><p class="success-msg"><?=h($msg)?></p><?php endif;?><?php if($error):?><p class="error-msg"><?=h($error)?></p><?php endif;?>
-<div class="card-box"><form method="POST" enctype="multipart/form-data" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;align-items:end"><input type="hidden" name="save_document" value="1"><div><label>Type</label><select name="document_type" required><?php foreach(['Contract','ID Copy','Driving License','Passport','Insurance','Invoice','Maintenance Record','Other'] as $t):?><option><?=h($t)?></option><?php endforeach;?></select></div><div><label>Title</label><input name="title" required></div><div><label>Customer</label><select name="customer_id"><option value="">None</option><?php while($c=$customers->fetch_assoc()):?><option value="<?=h($c['id'])?>"><?=h($c['full_name'])?></option><?php endwhile;?></select></div><div><label>Car</label><select name="car_id"><option value="">None</option><?php while($c=$cars->fetch_assoc()):?><option value="<?=h($c['id'])?>"><?=h(car_display_name($c))?></option><?php endwhile;?></select></div><div><label>Rental</label><select name="rental_id"><option value="">None</option><?php while($r=$rentals->fetch_assoc()):?><option value="<?=h($r['id'])?>">#<?=h($r['id'].' '.$r['full_name'].' '.$r['reg_no'])?></option><?php endwhile;?></select></div><div><label>Expiry Date</label><input type="date" name="expiry_date"></div><div><label>File</label><input type="file" name="document_file" accept=".pdf,.jpg,.jpeg,.png,.webp"><small>PDF, JPG, PNG or WEBP, max 10 MB</small></div><div style="grid-column:1/-1"><label>Notes</label><textarea name="notes"></textarea></div><button>Save Document</button></form></div>
-<form class="filter-box" method="GET"><input name="q" value="<?=h($q)?>" placeholder="Search document/customer/reg no"><button>Search</button><a href="manage.php" class="btn btn-danger">Clear</a></form><div class="table-responsive"><table class="table" border="1" cellpadding="10"><tr><th>#</th><th>Type</th><th>Title</th><th>Customer</th><th>Car</th><th>Expiry</th><th>File</th><th>Notes</th></tr><?php if($list&&$list->num_rows): while($d=$list->fetch_assoc()):?><tr><td><?=h($d['id'])?></td><td><?=h($d['document_type'])?></td><td><?=h($d['title'])?></td><td><?=h($d['full_name'])?></td><td><?=h($d['reg_no'])?></td><td><?= h(cr_date($d['expiry_date'])) ?></td><td><?= $d['file_path']?'<a target="_blank" rel="noopener" href="'.h('download.php?id='.(int)$d['id']).'">Open</a>':'No file' ?></td><td><?=h($d['notes'])?></td></tr><?php endwhile;else:?><tr><td colspan="8">No documents found.</td></tr><?php endif;?></table></div><?= cr_pagination($pg); ?></div></body></html>
+<?php cr_layout_start('Documents'); ?>
+<?= cr_page_header('Documents', 'Store contracts, ID copies, insurance papers, invoices, licences and other legal documents.'); ?>
+<?= cr_alerts($msg, $error); ?>
+
+<form method="POST" enctype="multipart/form-data" class="card">
+    <input type="hidden" name="save_document" value="1">
+    <div class="card-head"><h2>Add document</h2></div>
+    <div class="form-grid">
+        <div class="field">
+            <label for="document_type">Type <span class="req">*</span></label>
+            <select id="document_type" name="document_type" required><?php foreach (['Contract','ID Copy','Driving License','Passport','Insurance','Invoice','Maintenance Record','Other'] as $t): ?><option><?= h($t) ?></option><?php endforeach; ?></select>
+        </div>
+        <div class="field">
+            <label for="title">Title <span class="req">*</span></label>
+            <input id="title" name="title" required>
+        </div>
+        <div class="field">
+            <label for="expiry_date">Expiry date <span class="opt">(optional)</span></label>
+            <input type="date" id="expiry_date" name="expiry_date">
+        </div>
+        <div class="field">
+            <label for="customer_id">Customer <span class="opt">(optional)</span></label>
+            <select id="customer_id" name="customer_id"><option value="">None</option><?php while ($c = $customers->fetch_assoc()): ?><option value="<?= h($c['id']) ?>"><?= h($c['full_name']) ?></option><?php endwhile; ?></select>
+        </div>
+        <div class="field">
+            <label for="car_id">Car <span class="opt">(optional)</span></label>
+            <select id="car_id" name="car_id"><option value="">None</option><?php while ($c = $cars->fetch_assoc()): ?><option value="<?= h($c['id']) ?>"><?= h(car_display_name($c)) ?></option><?php endwhile; ?></select>
+        </div>
+        <div class="field">
+            <label for="rental_id">Rental <span class="opt">(optional)</span></label>
+            <select id="rental_id" name="rental_id"><option value="">None</option><?php while ($r = $rentals->fetch_assoc()): ?><option value="<?= h($r['id']) ?>">#<?= h($r['id'] . ' ' . $r['full_name'] . ' ' . $r['reg_no']) ?></option><?php endwhile; ?></select>
+        </div>
+        <div class="field span-all">
+            <label for="document_file">File <span class="opt">(optional)</span></label>
+            <input type="file" id="document_file" name="document_file" accept=".pdf,.jpg,.jpeg,.png,.webp">
+            <span class="hint">PDF, JPG, PNG or WEBP, max 10 MB.</span>
+        </div>
+        <div class="field span-all">
+            <label for="notes">Notes <span class="opt">(optional)</span></label>
+            <textarea id="notes" name="notes" rows="3"></textarea>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button type="submit"><?= cr_icon('upload'); ?> Save document</button>
+    </div>
+</form>
+
+<form method="GET" class="filters">
+    <div class="field grow">
+        <label for="q">Search</label>
+        <input id="q" name="q" value="<?= h($q) ?>" placeholder="Document, customer or reg no">
+    </div>
+    <button type="submit"><?= cr_icon('search'); ?> Search</button>
+    <a class="btn btn-secondary" href="manage.php">Clear</a>
+</form>
+
+<div class="card card-flush">
+    <div class="card-head"><h2>All documents</h2></div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>#</th><th>Type</th><th>Title</th><th>Customer</th><th>Car</th><th>Expiry</th><th>File</th><th>Notes</th></tr>
+            </thead>
+            <tbody>
+            <?php if ($list && $list->num_rows): while ($d = $list->fetch_assoc()): ?>
+                <tr>
+                    <td><?= h($d['id']) ?></td>
+                    <td><?= h($d['document_type']) ?></td>
+                    <td><span class="cell-title"><?= h($d['title']) ?></span></td>
+                    <td><?= h($d['full_name']) ?></td>
+                    <td><?php if (!empty($d['reg_no'])): ?><span class="plate"><?= h($d['reg_no']) ?></span><?php endif; ?></td>
+                    <td class="nowrap"><?= h(cr_date($d['expiry_date'])) ?></td>
+                    <td class="actions-cell"><?= $d['file_path'] ? '<a class="btn btn-sm btn-secondary" target="_blank" rel="noopener" href="' . h('download.php?id=' . (int)$d['id']) . '">' . cr_icon('file', 'icon-sm') . ' Open</a>' : '<span class="muted">No file</span>' ?></td>
+                    <td><?= h($d['notes']) ?></td>
+                </tr>
+            <?php endwhile; else: ?>
+                <tr><td colspan="8" class="table-empty">No documents found.</td></tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+    <?= cr_pagination($pg); ?>
+</div>
+<?php cr_layout_end(); ?>

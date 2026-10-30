@@ -35,4 +35,66 @@ $total=(float)$sumRow['total'];
 $pg=cr_page_total(cr_page(),(int)$sumRow['n']);
 $list=$conn->query("SELECT e.*,ca.reg_no FROM expenses e LEFT JOIN cars ca ON e.car_id=ca.id ORDER BY e.expense_date DESC,e.id DESC".cr_page_sql($pg));
 ?>
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Expense Tracking</title></head><body><?php include __DIR__.'/../includes/header.php'; include __DIR__.'/../includes/leftsidebar.php';?><div class="content-page"><h2>Expense Tracking</h2><?php if($msg):?><p class="success-msg"><?=h($msg)?></p><?php endif;?><?php if($error):?><p class="error-msg"><?=h($error)?></p><?php endif;?><div class="card-box"><form method="POST" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;align-items:end"><div><label>Date</label><input type="date" name="expense_date" value="<?=h(cr_today())?>" max="<?=h(cr_today())?>" required></div><div><label>Category</label><select name="category"><?php foreach($expenseCategories as $c):?><option><?=h($c)?></option><?php endforeach;?></select></div><div><label>Description</label><input name="description" maxlength="255" required></div><div><label>Amount</label><input type="number" step="0.01" min="0.01" name="amount" required></div><div><label>Car</label><select name="car_id"><option value="">General</option><?php while($c=$cars->fetch_assoc()):?><option value="<?=h($c['id'])?>"><?=h(car_display_name($c))?></option><?php endwhile;?></select></div><button>Save Expense</button></form></div><table class="table" border="1" cellpadding="10"><tr><th>Date</th><th>Category</th><th>Description</th><th>Car</th><th>Amount</th></tr><?php if($list&&$list->num_rows):while($e=$list->fetch_assoc()):?><tr><td><?= h(cr_date($e['expense_date'])) ?></td><td><?=h($e['category'])?></td><td><?=h($e['description'])?></td><td><?=h($e['reg_no'])?></td><td><?=money((float)$e['amount'])?></td></tr><?php endwhile; ?><tr><th colspan="4">Total</th><th><?=money($total)?></th></tr><?php else:?><tr><td colspan="5">No expenses yet.</td></tr><?php endif;?></table><?= cr_pagination($pg); ?></div></body></html>
+<?php cr_layout_start('Expenses'); ?>
+<?= cr_page_header('Expenses', 'Record business expenses such as fuel, maintenance, insurance and office costs.'); ?>
+<?= cr_alerts($msg, $error); ?>
+
+<form method="POST" class="card">
+    <div class="card-head"><h2>Add expense</h2></div>
+    <div class="form-grid">
+        <div class="field">
+            <label for="expense_date">Date <span class="req">*</span></label>
+            <input type="date" id="expense_date" name="expense_date" value="<?= h(cr_today()) ?>" max="<?= h(cr_today()) ?>" required>
+        </div>
+        <div class="field">
+            <label for="category">Category <span class="req">*</span></label>
+            <select id="category" name="category"><?php foreach ($expenseCategories as $c): ?><option><?= h($c) ?></option><?php endforeach; ?></select>
+        </div>
+        <div class="field">
+            <label for="amount">Amount <span class="req">*</span></label>
+            <input type="number" id="amount" step="0.01" min="0.01" name="amount" required>
+        </div>
+        <div class="field span-2">
+            <label for="description">Description <span class="req">*</span></label>
+            <input id="description" name="description" maxlength="255" required>
+        </div>
+        <div class="field">
+            <label for="car_id">Car <span class="opt">(optional)</span></label>
+            <select id="car_id" name="car_id"><option value="">General</option><?php while ($c = $cars->fetch_assoc()): ?><option value="<?= h($c['id']) ?>"><?= h(car_display_name($c)) ?></option><?php endwhile; ?></select>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button type="submit"><?= cr_icon('check'); ?> Save expense</button>
+    </div>
+</form>
+
+<div class="card card-flush">
+    <div class="card-head"><h2>All expenses</h2></div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>Date</th><th>Category</th><th>Description</th><th>Car</th><th class="num">Amount</th></tr>
+            </thead>
+            <tbody>
+            <?php if ($list && $list->num_rows): while ($e = $list->fetch_assoc()): ?>
+                <tr>
+                    <td class="nowrap"><?= h(cr_date($e['expense_date'])) ?></td>
+                    <td><?= h($e['category']) ?></td>
+                    <td><?= h($e['description']) ?></td>
+                    <td><?php if (!empty($e['reg_no'])): ?><span class="plate"><?= h($e['reg_no']) ?></span><?php else: ?><span class="muted">General</span><?php endif; ?></td>
+                    <td class="num"><?= money((float)$e['amount']) ?></td>
+                </tr>
+            <?php endwhile; ?>
+            </tbody>
+            <tfoot>
+                <tr><td colspan="4">Total</td><td class="num"><?= money($total) ?></td></tr>
+            </tfoot>
+            <?php else: ?>
+                <tr><td colspan="5" class="table-empty">No expenses yet.</td></tr>
+            </tbody>
+            <?php endif; ?>
+        </table>
+    </div>
+    <?= cr_pagination($pg); ?>
+</div>
+<?php cr_layout_end(); ?>

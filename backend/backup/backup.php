@@ -16,26 +16,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $files = glob(cr_storage_path('backups') . '/*.sql') ?: [];
 rsort($files);
 ?>
-<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Database Backup</title></head>
-<body>
-<?php include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/leftsidebar.php'; ?>
-<div class="content-page">
-    <div class="card-box">
-        <h2>Database Backup</h2>
-        <?php if($msg): ?><p class="alert-success"><?= h($msg); ?></p><?php endif; ?>
-        <?php if($error): ?><p class="alert-error"><?= h($error); ?></p><?php endif; ?>
-        <form method="post"><button type="submit" class="btn btn-primary">Backup Now</button></form>
-        <p>Automatic backups are made once a day and kept for <?= (int)cr_setting('backup_keep_days'); ?> days (change this in Settings). Manual backups are kept until you delete the file. Copy backups to another computer or drive regularly.</p>
-        <br><h3>Available Backups</h3><br>
-        <div class="table-responsive"><table class="table" border="1" cellpadding="10">
-            <tr><th>#</th><th>File</th><th>Size</th><th>Date</th><th>Action</th></tr>
-            <?php if($files): $i=1; foreach($files as $f): ?>
-                <tr><td><?= $i++; ?></td><td><?= h(basename($f)); ?></td><td><?php $kb = filesize($f) / 1024; echo $kb >= 1024 ? cr_number($kb / 1024, 1) . ' MB' : cr_number($kb, 0) . ' KB'; ?></td><td><?= h(cr_date(date('Y-m-d', filemtime($f))) . ' ' . date('H:i', filemtime($f))); ?></td><td><a class="btn btn-primary" href="<?= h(stock_action_url('download.php?file=' . urlencode(basename($f)))); ?>">Download</a></td></tr>
+<?php cr_layout_start('Backups'); ?>
+<?= cr_page_header('Database backups', 'Make a copy of the database and download earlier copies.', '<form method="post" class="mb-0"><button type="submit">' . cr_icon('database') . ' Back up now</button></form>'); ?>
+<?= cr_alerts($msg, $error); ?>
+<?= cr_alert('info', 'Automatic backups are made once a day and kept for ' . (int)cr_setting('backup_keep_days') . ' days (change this in Settings). Manual backups are kept until you delete the file. Copy backups to another computer or drive regularly.'); ?>
+
+<div class="card card-flush">
+    <div class="card-head"><h2>Available backups</h2></div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>#</th><th>File</th><th class="num">Size</th><th>Date</th><th>Action</th></tr></thead>
+            <tbody>
+            <?php if ($files): $i = 1; foreach ($files as $f): ?>
+                <tr>
+                    <td class="muted"><?= $i++; ?></td>
+                    <td><span class="cell-title"><?= h(basename($f)); ?></span></td>
+                    <td class="num"><?php $kb = filesize($f) / 1024; echo h($kb >= 1024 ? cr_number($kb / 1024, 1) . ' MB' : cr_number($kb, 0) . ' KB'); ?></td>
+                    <td class="nowrap"><?= h(cr_date(date('Y-m-d', filemtime($f))) . ' ' . date('H:i', filemtime($f))); ?></td>
+                    <td class="actions-cell"><a class="btn btn-sm btn-secondary" href="<?= h(stock_action_url('download.php?file=' . urlencode(basename($f)))); ?>"><?= cr_icon('download', 'icon-sm'); ?> Download</a></td>
+                </tr>
             <?php endforeach; else: ?>
-                <tr><td colspan="5">No backups yet.</td></tr>
+                <tr><td colspan="5" class="table-empty">No backups yet.</td></tr>
             <?php endif; ?>
-        </table></div>
+            </tbody>
+        </table>
     </div>
 </div>
-</body></html>
+<?php cr_layout_end(); ?>

@@ -28,8 +28,8 @@ if (!$user && !$error) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $user) {
     $password = (string)($_POST['password'] ?? '');
     $confirm = (string)($_POST['confirm_password'] ?? '');
-    if (strlen($password) < 8) {
-        $error = 'Password must be at least 8 characters.';
+    if (($pwProblem = cr_password_problem($password)) !== null) {
+        $error = $pwProblem;
     } elseif ($password !== $confirm) {
         $error = 'Passwords do not match.';
     } else {
@@ -47,33 +47,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $user) {
     }
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reset Password - Car Rental</title>
-    <link rel="stylesheet" href="<?= h(app_url('includes/css/style.css')); ?>?v=customer-ready-1">
-</head>
-<body>
-<div class="main-container centered-flex">
-    <div class="form-container">
-        <div class="icon fa fa-key"></div>
-        <form class="centered-flex" method="post">
-            <div class="title-register">RESET PASSWORD</div>
-            <div class="msg">
-                <?php if ($error): ?><p class="alert error"><?= h($error); ?></p><?php endif; ?>
-                <?php if ($success): ?><p class="alert success"><?= h($success); ?></p><?php endif; ?>
-            </div>
-            <?php if ($user): ?>
-                <input type="hidden" name="token" value="<?= h($token); ?>">
-                <div class="field"><input type="password" name="password" placeholder="New Password" required><span class="fa fa-lock"></span></div>
-                <div class="field"><input type="password" name="confirm_password" placeholder="Confirm Password" required><span class="fa fa-lock"></span></div>
-                <div class="btn-container"><input type="submit" id="login-btn" value="Reset Password"></div>
-            <?php endif; ?>
-            <div class="signup"><a href="login.php">Back to Login</a></div>
-        </form>
+<?php cr_auth_start('Choose a new password'); ?>
+<h1>Choose a new password</h1>
+<?= cr_alert('error', $error) . cr_alert('success', $success); ?>
+<?php if ($user): ?>
+<form method="post">
+    <input type="hidden" name="token" value="<?= h($token); ?>">
+    <div class="field">
+        <label for="password">New password</label>
+        <input type="password" id="password" name="password" minlength="10" autocomplete="new-password" required autofocus>
+        <span class="hint">At least 10 characters.</span>
     </div>
-</div>
-</body>
-</html>
+    <div class="field">
+        <label for="confirm_password">Confirm new password</label>
+        <input type="password" id="confirm_password" name="confirm_password" autocomplete="new-password" required>
+    </div>
+    <div class="form-actions mt-3">
+        <button type="submit" class="btn-block">Save new password</button>
+    </div>
+</form>
+<?php endif; ?>
+<p class="auth-links"><a href="login.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> Back to sign in</a></p>
+<?php cr_auth_end(); ?>

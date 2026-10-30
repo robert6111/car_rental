@@ -82,69 +82,56 @@ if (!$damage) {
 $formError = $_SESSION['error'] ?? '';
 unset($_SESSION['error']);
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Edit Damage</title>
-</head>
-<body>
-<?php include __DIR__ . '/../includes/header.php'; ?>
-<?php include __DIR__ . '/../includes/leftsidebar.php'; ?>
+<?php cr_layout_start('Edit damage'); ?>
+<a class="back-link" href="list_damage.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All damages</a>
+<?= cr_page_header('Edit damage #' . (int)$damage['id'], 'Update the damage details and record the repair.', '<a class="btn btn-secondary" href="view_damage.php?id=' . (int)$damage['id'] . '">' . cr_icon('eye') . ' View</a>'); ?>
+<?= cr_alert('error', (string)$formError); ?>
 
-<div class="content-page">
-<h2>Edit Damage (ID: <?= (int)$damage['id'] ?>)</h2>
-<?php if ($formError): ?><div style="color:red; font-weight:bold;"><?= h($formError) ?></div><?php endif; ?>
+<form method="POST" class="card">
+    <input type="hidden" name="id" value="<?= (int)$damage['id'] ?>">
+    <div class="form-grid">
+        <div class="field span-all">
+            <label for="damage_description">Description <span class="req">*</span></label>
+            <textarea id="damage_description" name="damage_description" rows="4" required><?= h($damage['damage_description']) ?></textarea>
+        </div>
+        <div class="field">
+            <label for="severity">Severity</label>
+            <select id="severity" name="severity">
+                <?php foreach ($damageSeverities as $sev): ?>
+                <option value="<?= h($sev) ?>" <?= $damage['severity'] === $sev ? 'selected' : '' ?>><?= h(ucfirst($sev)) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="field">
+            <label for="estimated_cost">Estimated cost <span class="opt">(optional)</span></label>
+            <input type="number" id="estimated_cost" step="0.01" min="0" name="estimated_cost" value="<?= h($damage['estimated_cost']) ?>">
+        </div>
+    </div>
 
+    <div class="form-section">
+        <h3>Repair</h3>
+        <div class="form-grid">
+            <div class="field">
+                <label for="repaired">Repaired?</label>
+                <select id="repaired" name="repaired">
+                    <option value="0" <?= (int)$damage['repaired'] === 0 ? 'selected' : '' ?>>No</option>
+                    <option value="1" <?= (int)$damage['repaired'] === 1 ? 'selected' : '' ?>>Yes</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="repair_cost">Repair cost <span class="opt">(optional)</span></label>
+                <input type="number" id="repair_cost" step="0.01" min="0" name="repair_cost" value="<?= h($damage['repair_cost']) ?>">
+            </div>
+            <div class="field">
+                <label for="repair_date">Repair date <span class="opt">(optional)</span></label>
+                <input type="date" id="repair_date" name="repair_date" max="<?= h(cr_today()) ?>" value="<?= h(cr_valid_date((string)($damage['repair_date'] ?? '')) ? $damage['repair_date'] : '') ?>">
+            </div>
+        </div>
+    </div>
 
-<form method="POST">
-<input type="hidden" name="id" value="<?= (int)$damage['id'] ?>">
-
-
-<label>Description:</label><br>
-<textarea name="damage_description" rows="4" cols="50" required><?= h($damage['damage_description']) ?></textarea><br><br>
-
-
-<label>Severity:</label>
-<select name="severity">
-<?php foreach ($damageSeverities as $sev): ?>
-<option value="<?= h($sev) ?>" <?= $damage['severity'] === $sev ? 'selected' : '' ?>><?= h(ucfirst($sev)) ?></option>
-<?php endforeach; ?>
-</select><br><br>
-
-
-<label>Estimated Cost:</label><br>
-<input type="number" step="0.01" min="0" name="estimated_cost" value="<?= h($damage['estimated_cost']) ?>"><br><br>
-
-
-<label>Repaired?</label>
-<select name="repaired">
-<option value="0" <?= (int)$damage['repaired'] === 0 ? 'selected' : '' ?>>No</option>
-<option value="1" <?= (int)$damage['repaired'] === 1 ? 'selected' : '' ?>>Yes</option>
-</select><br><br>
-
-
-<label>Repair Cost:</label><br>
-<input type="number" step="0.01" min="0" name="repair_cost" value="<?= h($damage['repair_cost']) ?>"><br><br>
-
-
-<label>Repair Date:</label><br>
-<input type="date" name="repair_date" max="<?= h(cr_today()) ?>"
-       value="<?= h(cr_valid_date((string)($damage['repair_date'] ?? '')) ? $damage['repair_date'] : '') ?>">
-<br><br>
-
-
-<button type="submit" style="margin-top: 20px; border: 1px solid black; border-radius: 5px;">Save</button>
-<br><br>
+    <div class="form-actions">
+        <button type="submit"><?= cr_icon('check'); ?> Save</button>
+        <a class="btn btn-secondary" href="list_damage.php">Back</a>
+    </div>
 </form>
-
-
-<a href="view_damage.php?id=<?= (int)$damage['id'] ?>">View</a>
-<br>
-<a href="list_damage.php">Back</a>
-
-
-</div>
-</body>
-</html>
+<?php cr_layout_end(); ?>

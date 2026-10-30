@@ -6,5 +6,34 @@ $result = $conn->query("SELECT cd.*, cars.reg_no, makes.name AS make_name, model
 if (!$result || $result->num_rows === 0) { $_SESSION['error'] = "Damage record not found."; header("Location: list_damage.php"); exit; }
 $damage = $result->fetch_assoc();
 ?>
-<!DOCTYPE html><html><head><title>View Damage</title><link rel="stylesheet" href="/../backend/includes/css/dashboard.css"><link rel="stylesheet" href="/../backend/includes/css/common.css"><link rel="stylesheet" href="/../backend/includes/css/header.css"><link rel="stylesheet" href="/../backend/includes/css/all_cars.css"></head><body><?php include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/leftsidebar.php'; ?>
-<div class="content-page"><h2>Damage Details (ID: <?= h($damage['id']) ?>)</h2><p><strong>Car:</strong> <?= h($damage['make_name'] . " " . $damage['model_name'] . " (" . $damage['reg_no'] . ")") ?></p><p><strong>Connected Renter:</strong> <?= h($damage['renter_name'] ?? 'Not linked') ?><?php if(!empty($damage['renter_phone'])): ?> | <?= h($damage['renter_phone']) ?><?php endif; ?><?php if(!empty($damage['renter_email'])): ?> | <?= h($damage['renter_email']) ?><?php endif; ?></p><?php if($damage['rental_no']): ?><p><strong>Rental:</strong> #<?= h($damage['rental_no']) ?> (<?= h($damage['start_date']) ?> to <?= h(cr_date($damage['end_date'])) ?>, <?= h($damage['rental_status']) ?>)</p><?php endif; ?><p><strong>Description:</strong> <?= nl2br(h($damage['damage_description'])) ?></p><p><strong>Severity:</strong> <?= h(ucfirst($damage['severity'])) ?></p><p><strong>Estimated Cost:</strong> <?= money((float)$damage['estimated_cost']) ?></p><p><strong>Date Reported:</strong> <?= h(cr_date($damage['date_reported'])) ?></p><p><strong>Repaired:</strong> <?= $damage['repaired'] ? 'Yes' : 'No' ?></p><?php if ($damage['repaired']): ?><p><strong>Repair Cost:</strong> <?= money((float)$damage['repair_cost']) ?></p><p><strong>Repair Date:</strong> <?= h(cr_date($damage['repair_date'])) ?></p><?php endif; ?><a href="edit_damage.php?id=<?= h($damage['id']) ?>">Edit</a> <a href="list_damage.php">Back</a></div></body></html>
+<?php cr_layout_start('Damage details'); ?>
+<a class="back-link" href="list_damage.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All damages</a>
+<?= cr_page_header('Damage #' . (int)$damage['id'], 'Damage report details and repair status.', '<a class="btn" href="edit_damage.php?id=' . (int)$damage['id'] . '">' . cr_icon('edit') . ' Edit</a>'); ?>
+
+<div class="grid grid-2">
+    <div class="card">
+        <div class="card-head"><h2>Damage</h2></div>
+        <dl class="details">
+            <dt>Car</dt><dd><?= h(trim($damage['make_name'] . ' ' . $damage['model_name'])) ?> <span class="plate"><?= h($damage['reg_no']) ?></span></dd>
+            <dt>Description</dt><dd><?= nl2br(h($damage['damage_description'])) ?></dd>
+            <dt>Severity</dt><dd><?= cr_status_badge((string)$damage['severity'], ucfirst((string)$damage['severity'])) ?></dd>
+            <dt>Estimated cost</dt><dd><?= money((float)$damage['estimated_cost']) ?></dd>
+            <dt>Date reported</dt><dd><?= h(cr_date($damage['date_reported'])) ?></dd>
+        </dl>
+    </div>
+    <div class="card">
+        <div class="card-head"><h2>Renter and repair</h2></div>
+        <dl class="details">
+            <dt>Connected renter</dt><dd><?= h($damage['renter_name'] ?? 'Not linked') ?><?php if (!empty($damage['renter_phone'])): ?><span class="cell-sub"><?= h($damage['renter_phone']) ?></span><?php endif; ?><?php if (!empty($damage['renter_email'])): ?><span class="cell-sub"><?= h($damage['renter_email']) ?></span><?php endif; ?></dd>
+            <?php if ($damage['rental_no']): ?>
+            <dt>Rental</dt><dd>#<?= h($damage['rental_no']) ?> (<?= h(cr_date($damage['start_date'])) ?> to <?= h(cr_date($damage['end_date'])) ?>) <?= cr_status_badge((string)$damage['rental_status']) ?></dd>
+            <?php endif; ?>
+            <dt>Repaired</dt><dd><?= cr_status_badge($damage['repaired'] ? 'Yes' : 'No') ?></dd>
+            <?php if ($damage['repaired']): ?>
+            <dt>Repair cost</dt><dd><?= money((float)$damage['repair_cost']) ?></dd>
+            <dt>Repair date</dt><dd><?= h(cr_date($damage['repair_date'])) ?></dd>
+            <?php endif; ?>
+        </dl>
+    </div>
+</div>
+<?php cr_layout_end(); ?>

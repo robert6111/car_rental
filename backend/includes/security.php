@@ -225,11 +225,18 @@ function stock_has_permission(string $permission): bool {
     return in_array(stock_current_role_id(), $map[$permission], true);
 }
 
+/** Simple full-page message (used before the layout code is loaded). */
+function stock_message_page(string $title, string $message, string $linkUrl, string $linkText): void {
+    $e = fn($v) => htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
+    echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' . $e($title) . '</title>'
+        . '<link rel="stylesheet" href="' . $e(stock_security_app_url('includes/css/app.css')) . '"></head>'
+        . '<body class="auth-body"><main class="auth-shell"><div class="auth-card"><h1>' . $e($title) . '</h1><p class="lead">' . $e($message) . '</p>'
+        . '<a class="btn btn-block" href="' . $e($linkUrl) . '">' . $e($linkText) . '</a></div></main></body></html>';
+}
+
 function stock_deny_access(): void {
     http_response_code(403);
-    echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Access denied</title></head>'
-        . '<body style="font-family:system-ui,Arial;padding:30px;"><h2 style="color:#991b1b;">Access denied</h2><p>You do not have permission to open this page.</p>'
-        . '<p><a href="' . htmlspecialchars(stock_security_app_url('dashboard.php'), ENT_QUOTES, 'UTF-8') . '">Back to dashboard</a></p></body></html>';
+    stock_message_page('Access denied', 'Your account does not have permission to open this page. Ask an administrator if you need access.', stock_security_app_url('dashboard.php'), 'Back to dashboard');
     exit;
 }
 
@@ -319,8 +326,9 @@ function stock_validate_csrf(): void {
     $submitted = $_POST['stock_csrf_token'] ?? '';
     if (!$expected || !is_string($submitted) || !$submitted || !hash_equals($expected, $submitted)) {
         http_response_code(403);
-        echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Security check failed</title></head><body style="font-family:system-ui,Arial;padding:30px;">'
-            . '<h2 style="color:#991b1b;">Security check failed</h2><p>Your session may have expired. Please go back, refresh the page, and try again.</p></body></html>';
+        $back = (string)($_SERVER['HTTP_REFERER'] ?? '');
+        $sameSite = $back !== '' && preg_match('#^https?://#i', $back) && strcasecmp((string)parse_url($back, PHP_URL_HOST), (string)($_SERVER['HTTP_HOST'] ?? '')) === 0;
+        stock_message_page('Please try again', 'This form was open for too long or your session ended, so it was not saved. Go back, refresh the page and send it again.', $sameSite ? $back : stock_security_app_url('dashboard.php'), 'Go back');
         exit;
     }
 }
@@ -346,8 +354,7 @@ function stock_action_token_valid(): bool {
 function stock_validate_action_token(): void {
     if (!stock_action_token_valid()) {
         http_response_code(403);
-        echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Security check failed</title></head><body style="font-family:system-ui,Arial;padding:30px;">'
-            . '<h2 style="color:#991b1b;">Security check failed</h2><p>Please refresh the page and use the action button again.</p></body></html>';
+        stock_message_page('Please try again', 'This link has expired. Refresh the page and use the button again.', stock_security_app_url('dashboard.php'), 'Back to dashboard');
         exit;
     }
 }

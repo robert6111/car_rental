@@ -89,92 +89,68 @@ if (!$result) {
 }
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cars Inventory</title>
-    <style>
-        .status-badge-NotReturned { color: #fff; background: #7f1d1d; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
-    </style>
-</head>
-<body>
-<?php
-include __DIR__ . '/../includes/header.php';
-include __DIR__ . '/../includes/leftsidebar.php';
-?>
-<div class="content-page">
-    <h2>Cars Inventory</h2>
+<?php cr_layout_start('Car inventory'); ?>
+<?= cr_page_header('Car inventory', 'See which cars are free and move cars in and out of maintenance.', $canManage ? '<a class="btn" href="add.php">' . cr_icon('plus') . ' Add car</a>' : ''); ?>
+<?= cr_alerts($msg, $error); ?>
 
-    <?php if ($msg): ?>
-        <div style="color:green;"><?= h($msg) ?></div>
-    <?php elseif ($error): ?>
-        <div style="color:red;"><?= h($error) ?></div>
-    <?php endif; ?>
-
-    <?php if ($canManage): ?>
-    <div style="margin-bottom:20px;">
-        <a href="add.php" class="btn btn-primary">Add New Car</a>
+<div class="card">
+    <div class="card-head"><h2>All cars</h2></div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Reg no</th>
+                    <th>Car</th>
+                    <th>Year</th>
+                    <th>Status</th>
+                    <th class="num">Price per day</th>
+                    <?php if ($canManage): ?><th>Actions</th><?php endif; ?>
+                </tr>
+            </thead>
+            <tbody>
+            <?php if ($result->num_rows > 0): ?>
+                <?php $count = (int)$pg['offset'] + 1; ?>
+                <?php while ($row = $result->fetch_assoc()): ?>
+                    <?php $status = (string)$row['availability_status']; ?>
+                    <tr>
+                        <td class="muted"><?= $count++ ?></td>
+                        <td><span class="plate"><?= h($row['reg_no']) ?></span></td>
+                        <td class="cell-title"><?= h(trim($row['make'] . ' ' . $row['model'])) ?></td>
+                        <td><?= h($row['car_year']) ?></td>
+                        <td>
+                            <?php if ($status === 'Not Returned'): ?>
+                                <span title="Rental has ended but the return has not been confirmed"><?= cr_status_badge($status, 'Not returned') ?></span>
+                            <?php else: ?>
+                                <?= cr_status_badge($status) ?>
+                            <?php endif; ?>
+                        </td>
+                        <td class="num"><?= money($row['price_per_day']) ?></td>
+                        <?php if ($canManage): ?>
+                        <td class="actions-cell">
+                            <a href="edit.php?id=<?= (int)$row['id'] ?>" class="btn btn-sm btn-secondary"><?= cr_icon('edit', 'icon-sm') ?> Edit</a>
+                            <?php if ($status === 'Maintenance'): ?>
+                                <a href="<?= h(stock_action_url('cars_inventory.php?action=available&car_id=' . (int)$row['id'])); ?>"
+                                   data-confirm="Take this car out of maintenance?"
+                                   class="btn btn-sm btn-success"><?= cr_icon('check', 'icon-sm') ?> Make available</a>
+                            <?php elseif (!in_array($status, ['Rented', 'Not Returned'], true)): ?>
+                                <a href="<?= h(stock_action_url('cars_inventory.php?action=maintenance&car_id=' . (int)$row['id'])); ?>"
+                                   data-confirm="Move this car to maintenance? It cannot be rented until it is made available again."
+                                   class="btn btn-sm btn-warning"><?= cr_icon('wrench', 'icon-sm') ?> Move to maintenance</a>
+                            <?php endif; ?>
+                        </td>
+                        <?php endif; ?>
+                    </tr>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <tr><td colspan="<?= $canManage ? 7 : 6 ?>" class="table-empty">No cars found.</td></tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
     </div>
-    <?php endif; ?>
-<table border="1" cellpadding="10">
-    <tr>
-        <th>#</th>
-        <th>Registration No</th>
-        <th>Make</th>
-        <th>Model</th>
-        <th>Year</th>
-        <th>Status</th>
-        <th>Price per Day</th>
-        <?php if ($canManage): ?><th>Actions</th><?php endif; ?>
-    </tr>
-    <?php if ($result->num_rows > 0): ?>
-        <?php $count = (int)$pg['offset'] + 1; ?>
-        <?php while ($row = $result->fetch_assoc()): ?>
-            <?php $status = (string)$row['availability_status']; ?>
-            <tr>
-                <td><?= $count++ ?></td>
-                <td><?= h($row['reg_no']) ?></td>
-                <td><?= h($row['make']) ?></td>
-                <td><?= h($row['model']) ?></td>
-                <td><?= h($row['car_year']) ?></td>
-                <td>
-                    <?php if ($status === 'Not Returned'): ?>
-                        <span class="status-badge-NotReturned" title="Rental has ended but the return has not been confirmed">Not Returned</span>
-                    <?php else: ?>
-                        <?= h($status) ?>
-                    <?php endif; ?>
-                </td>
-                <td><?= money($row['price_per_day']) ?></td>
-                <?php if ($canManage): ?>
-                <td>
-                    <a href="edit.php?id=<?= (int)$row['id'] ?>" class="btn btn-sm btn-warning">Edit</a> <br><br>
-                    <?php if ($status === 'Maintenance'): ?>
-                        <a href="<?= h(stock_action_url('cars_inventory.php?action=available&car_id=' . (int)$row['id'])); ?>"
-                           onclick="return confirm('Take this car out of maintenance?')"
-                           class="btn btn-sm btn-primary">Make available</a>
-                    <?php elseif (!in_array($status, ['Rented', 'Not Returned'], true)): ?>
-                        <a href="<?= h(stock_action_url('cars_inventory.php?action=maintenance&car_id=' . (int)$row['id'])); ?>"
-                           onclick="return confirm('Move this car to maintenance? It cannot be rented until it is made available again.')"
-                           class="btn btn-sm btn-danger">Move to maintenance</a>
-                    <?php endif; ?>
-                </td>
-                <?php endif; ?>
-            </tr>
-        <?php endwhile; ?>
-    <?php else: ?>
-        <tr>
-            <td colspan="<?= $canManage ? 8 : 7 ?>" style="text-align:center;">No cars found.</td>
-        </tr>
-    <?php endif; ?>
-</table>
-<?= cr_pagination($pg); ?>
-
+    <?= cr_pagination($pg); ?>
 </div>
-
+<?php cr_layout_end(); ?>
 <?php
 $result->free();
 ?>
-</body>
-</html>

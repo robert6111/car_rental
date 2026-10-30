@@ -101,47 +101,115 @@ if ($where) {
 }
 $allCustomers = $conn->query('SELECT id, full_name, phone_number FROM customers ORDER BY full_name');
 ?>
-<!DOCTYPE html><html><head><title>Link Customer</title><style>.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:end}.req{color:#991b1b}dl.details{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:0}dl.details dt{font-weight:600}dl.details dd{margin:0}</style></head><body><?php include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/leftsidebar.php'; ?>
-<div class="content-page">
-<h2>Link Booking Request #<?= (int)$id; ?> to a Customer</h2>
-<p><a href="manage.php">&larr; Back to reservations</a></p>
-<?php if ($error): ?><p class="error-msg"><?= h($error); ?></p><?php endif; ?>
+<?php cr_layout_start('Link customer'); ?>
+<a class="back-link" href="manage.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All reservations</a>
+<?= cr_page_header('Link booking request #' . (int)$id . ' to a customer', 'Check the person first, then link an existing customer or create a new one.'); ?>
+<?= cr_alerts('', $error); ?>
 
-<div class="card-box"><h3>Request details</h3>
-<dl class="details">
-<dt>Name</dt><dd><?= h($res['customer_name'] ?: '-'); ?></dd>
-<dt>Phone</dt><dd><?= h($res['phone_number'] ?: '-'); ?></dd>
-<dt>Email</dt><dd><?= h($res['email'] ?: '-'); ?></dd>
-<dt>Car</dt><dd><?= h(car_display_name($res)); ?></dd>
-<dt>Dates</dt><dd><?= h(cr_date($res['pickup_date'])); ?> to <?= h(cr_date($res['dropoff_date'])); ?></dd>
-<dt>Status</dt><dd><?= h($res['status']); ?> (<?= h($res['source']); ?>)</dd>
-<?php if (!empty($res['notes'])): ?><dt>Notes</dt><dd><?= nl2br(h($res['notes'])); ?></dd><?php endif; ?>
-<?php if ($res['customer_id']): ?><dt>Linked to</dt><dd><strong><?= h($res['linked_name'] ?? 'Deleted customer'); ?></strong> <?= h($res['linked_phone'] ?? ''); ?></dd><?php endif; ?>
-</dl></div>
+<div class="card">
+    <div class="card-head"><h2>Request details</h2><?= cr_status_badge((string)$res['status']); ?></div>
+    <dl class="details">
+        <dt>Name</dt><dd><?= h($res['customer_name'] ?: '-'); ?></dd>
+        <dt>Phone</dt><dd><?= h($res['phone_number'] ?: '-'); ?></dd>
+        <dt>Email</dt><dd><?= h($res['email'] ?: '-'); ?></dd>
+        <dt>Car</dt><dd><?= h(car_display_name(array_merge($res, ['reg_no' => '']))); ?><?php if (!empty($res['reg_no'])): ?> <span class="plate"><?= h($res['reg_no']); ?></span><?php endif; ?></dd>
+        <dt>Dates</dt><dd><?= h(cr_date($res['pickup_date'])); ?> to <?= h(cr_date($res['dropoff_date'])); ?></dd>
+        <dt>Source</dt><dd><?= h($res['source']); ?></dd>
+        <?php if (!empty($res['notes'])): ?><dt>Notes</dt><dd><?= nl2br(h($res['notes'])); ?></dd><?php endif; ?>
+        <?php if ($res['customer_id']): ?><dt>Linked to</dt><dd><span class="cell-title"><?= h($res['linked_name'] ?? 'Deleted customer'); ?></span> <span class="muted"><?= h($res['linked_phone'] ?? ''); ?></span></dd><?php endif; ?>
+    </dl>
+</div>
 
-<div class="card-box"><h3>Link to an existing customer</h3>
-<?php if ($matches): ?>
-<p>Possible matches by phone, email or name. Check the details before linking.</p>
-<table border="1" cellspacing="0" cellpadding="8" width="100%"><tr><th>Name</th><th>Phone</th><th>Email</th><th>Licence</th><th></th></tr>
-<?php foreach ($matches as $m): ?><tr><td><?= h($m['full_name']); ?></td><td><?= h($m['phone_number']); ?></td><td><?= h($m['email']); ?></td><td><?= h($m['license_no']); ?></td><td><form method="POST" style="margin:0"><input type="hidden" name="customer_id" value="<?= (int)$m['id']; ?>"><button type="submit" name="link_existing" value="1">Link</button></form></td></tr><?php endforeach; ?>
-</table>
-<?php else: ?><p>No customer with the same phone, email or name was found.</p><?php endif; ?>
-<form method="POST" class="grid2" style="margin-top:14px">
-<div><label for="customer_id">Or choose any customer</label><select id="customer_id" name="customer_id" required><option value="">Select</option><?php while ($c = $allCustomers->fetch_assoc()): ?><option value="<?= (int)$c['id']; ?>"><?= h($c['full_name'] . ' - ' . $c['phone_number']); ?></option><?php endwhile; ?></select></div>
-<div><button type="submit" name="link_existing" value="1">Link customer</button></div>
-</form></div>
+<div class="card">
+    <div class="card-head"><h2>Link to an existing customer</h2></div>
+    <?php if ($matches): ?>
+        <p class="muted">Possible matches by phone, email or name. Check the details before linking.</p>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Licence</th><th><span class="sr-only">Action</span></th></tr></thead>
+                <tbody>
+                <?php foreach ($matches as $m): ?>
+                    <tr>
+                        <td class="cell-title"><?= h($m['full_name']); ?></td>
+                        <td><?= h($m['phone_number']); ?></td>
+                        <td><?= h($m['email']); ?></td>
+                        <td><?= h($m['license_no']); ?></td>
+                        <td class="actions-cell text-right">
+                            <form method="POST" class="mb-0">
+                                <input type="hidden" name="customer_id" value="<?= (int)$m['id']; ?>">
+                                <button type="submit" name="link_existing" value="1" class="btn-sm"><?= cr_icon('link', 'icon-sm'); ?> Link</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    <?php else: ?>
+        <p class="muted">No customer with the same phone, email or name was found.</p>
+    <?php endif; ?>
+    <form method="POST" class="filters mt-4 mb-0">
+        <div class="field grow">
+            <label for="customer_id">Or choose any customer</label>
+            <select id="customer_id" name="customer_id" required>
+                <option value="">Select a customer</option>
+                <?php while ($c = $allCustomers->fetch_assoc()): ?>
+                    <option value="<?= (int)$c['id']; ?>"><?= h($c['full_name'] . ' - ' . $c['phone_number']); ?></option>
+                <?php endwhile; ?>
+            </select>
+        </div>
+        <button type="submit" name="link_existing" value="1"><?= cr_icon('link'); ?> Link customer</button>
+    </form>
+</div>
 
-<div class="card-box"><h3>Create a new customer from this request</h3>
-<form method="POST" class="grid2">
-<div><label for="n_full_name">Full name <span class="req">*</span></label><input id="n_full_name" name="full_name" maxlength="255" required value="<?= h($new['full_name']); ?>"></div>
-<div><label for="n_phone">Phone <span class="req">*</span></label><input id="n_phone" name="phone_number" maxlength="50" required value="<?= h($new['phone_number']); ?>"></div>
-<div><label for="n_email">Email</label><input id="n_email" type="email" name="email" maxlength="255" value="<?= h($new['email']); ?>"></div>
-<div><label for="n_license">Driver licence no. <span class="req">*</span></label><input id="n_license" name="license_no" maxlength="100" required value="<?= h($new['license_no']); ?>"></div>
-<div><label for="n_license_expiry">Licence expiry</label><input id="n_license_expiry" type="date" name="license_expiry" value="<?= h($new['license_expiry']); ?>"></div>
-<div><label for="n_id">ID number</label><input id="n_id" name="id_number" maxlength="100" value="<?= h($new['id_number']); ?>"></div>
-<div><label for="n_passport">Passport no.</label><input id="n_passport" name="passport_no" maxlength="100" value="<?= h($new['passport_no']); ?>"></div>
-<div><label for="n_passport_expiry">Passport expiry</label><input id="n_passport_expiry" type="date" name="passport_expiry" value="<?= h($new['passport_expiry']); ?>"></div>
-<div style="grid-column:1/-1"><label for="n_address">Address</label><input id="n_address" name="address" maxlength="255" value="<?= h($new['address']); ?>"></div>
-<div><button type="submit" name="create_customer" value="1">Create customer and link</button></div>
-</form></div>
-</div></body></html>
+<form method="POST" class="card">
+    <h2 class="section-title">Create a new customer from this request</h2>
+    <div class="form-grid">
+        <div class="field">
+            <label for="n_full_name">Full name <span class="req">*</span></label>
+            <input type="text" id="n_full_name" name="full_name" maxlength="255" required value="<?= h($new['full_name']); ?>">
+        </div>
+        <div class="field">
+            <label for="n_phone">Phone number <span class="req">*</span></label>
+            <input type="tel" id="n_phone" name="phone_number" maxlength="50" required value="<?= h($new['phone_number']); ?>">
+        </div>
+        <div class="field">
+            <label for="n_email">Email <span class="opt">(optional)</span></label>
+            <input type="email" id="n_email" name="email" maxlength="255" value="<?= h($new['email']); ?>">
+        </div>
+        <div class="field span-all">
+            <label for="n_address">Address <span class="opt">(optional)</span></label>
+            <input type="text" id="n_address" name="address" maxlength="255" value="<?= h($new['address']); ?>">
+        </div>
+    </div>
+    <div class="form-section">
+        <h3>Licence and identity</h3>
+        <div class="form-grid">
+            <div class="field">
+                <label for="n_license">Driver licence number <span class="req">*</span></label>
+                <input type="text" id="n_license" name="license_no" maxlength="100" required value="<?= h($new['license_no']); ?>">
+            </div>
+            <div class="field">
+                <label for="n_license_expiry">Licence expiry</label>
+                <input type="date" id="n_license_expiry" name="license_expiry" value="<?= h($new['license_expiry']); ?>">
+            </div>
+            <div class="field">
+                <label for="n_id">ID number</label>
+                <input type="text" id="n_id" name="id_number" maxlength="100" value="<?= h($new['id_number']); ?>">
+            </div>
+            <div class="field">
+                <label for="n_passport">Passport number</label>
+                <input type="text" id="n_passport" name="passport_no" maxlength="100" value="<?= h($new['passport_no']); ?>">
+            </div>
+            <div class="field">
+                <label for="n_passport_expiry">Passport expiry</label>
+                <input type="date" id="n_passport_expiry" name="passport_expiry" value="<?= h($new['passport_expiry']); ?>">
+            </div>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button type="submit" name="create_customer" value="1"><?= cr_icon('user-plus'); ?> Create customer and link</button>
+        <a class="btn btn-secondary" href="manage.php">Cancel</a>
+    </div>
+</form>
+<?php cr_layout_end(); ?>

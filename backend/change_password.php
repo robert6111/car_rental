@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->close();
 
     if (!$row || !password_verify($current, $row['password'])) $error = 'Current password is incorrect.';
-    elseif (strlen($new) < 8) $error = 'New password must be at least 8 characters.';
+    elseif (($passwordProblem = cr_password_problem($new)) !== null) $error = $passwordProblem;
     elseif ($new !== $confirm) $error = 'New passwords do not match.';
     else {
         $hash = password_hash($new, PASSWORD_DEFAULT);
@@ -34,22 +34,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Change Password</title></head>
-<body>
-<?php include __DIR__ . '/includes/header.php'; include __DIR__ . '/includes/leftsidebar.php'; ?>
-<div class="content-page">
-    <div class="card-box" style="max-width:650px;">
-        <h2>Change Password</h2>
-        <?php if($msg): ?><p class="alert-success"><?= h($msg); ?></p><?php endif; ?>
-        <?php if($error): ?><p class="alert-error"><?= h($error); ?></p><?php endif; ?>
-        <form method="post">
-            <label>Current Password</label><br><input type="password" name="current_password" required><br><br>
-            <label>New Password</label><br><input type="password" name="new_password" required><br><br>
-            <label>Confirm New Password</label><br><input type="password" name="confirm_password" required><br><br>
-            <button type="submit" class="btn btn-primary">Update Password</button>
-        </form>
+<?php cr_layout_start('Change password'); ?>
+<a class="back-link" href="<?= h(app_url('profile.php')); ?>"><?= cr_icon('arrow-left', 'icon-sm'); ?> My profile</a>
+<?= cr_page_header('Change password', 'Other devices are signed out after the change.'); ?>
+<?= cr_alerts($msg, $error); ?>
+
+<form method="post" class="card card-narrow">
+    <div class="field">
+        <label for="current_password">Current password <span class="req">*</span></label>
+        <div class="password-wrap">
+            <input type="password" id="current_password" name="current_password" autocomplete="current-password" required>
+            <button type="button" class="password-toggle" data-password-toggle="current_password" aria-label="Show password"><?= cr_icon('eye'); ?></button>
+        </div>
     </div>
-</div>
-</body></html>
+    <div class="field mt-4">
+        <label for="new_password">New password <span class="req">*</span></label>
+        <div class="password-wrap">
+            <input type="password" id="new_password" name="new_password" minlength="10" maxlength="72" autocomplete="new-password" required>
+            <button type="button" class="password-toggle" data-password-toggle="new_password" aria-label="Show password"><?= cr_icon('eye'); ?></button>
+        </div>
+        <span class="hint">At least 10 characters.</span>
+    </div>
+    <div class="field mt-4">
+        <label for="confirm_password">Confirm new password <span class="req">*</span></label>
+        <div class="password-wrap">
+            <input type="password" id="confirm_password" name="confirm_password" minlength="10" maxlength="72" autocomplete="new-password" required>
+            <button type="button" class="password-toggle" data-password-toggle="confirm_password" aria-label="Show password"><?= cr_icon('eye'); ?></button>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button type="submit"><?= cr_icon('key'); ?> Update password</button>
+        <a class="btn btn-secondary" href="<?= h(app_url('profile.php')); ?>">Cancel</a>
+    </div>
+</form>
+<?php cr_layout_end(); ?>
