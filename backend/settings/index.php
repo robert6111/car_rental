@@ -12,6 +12,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string)($_POST['action'] ?? 'save');
 
     if ($action === 'save') {
+        // Currency dropdown: "Other" means the code was typed in the extra box.
+        if (($_POST['currency_code'] ?? '') === 'OTHER') $_POST['currency_code'] = strtoupper(trim((string)($_POST['currency_code_other'] ?? '')));
         [$clean, $errors] = cr_settings_validate($_POST);
 
         // Logo (PNG/JPG only, so it also works in PDFs) and letterhead (PDF).
@@ -83,7 +85,27 @@ function select_options(array $options, string $current): string {
 
 $timezones = DateTimeZone::listIdentifiers();
 $currentTz = sv('timezone') !== '' ? sv('timezone') : date_default_timezone_get();
-$commonCurrencies = ['USD' => '$', 'EUR' => '€', 'GBP' => '£', 'TRY' => '₺', 'KES' => 'KSh', 'TZS' => 'TSh', 'UGX' => 'USh', 'RWF' => 'FRw', 'NGN' => '₦', 'GHS' => 'GH₵', 'ZAR' => 'R', 'EGP' => 'E£', 'MAD' => 'DH', 'AED' => 'AED', 'SAR' => 'SAR', 'QAR' => 'QAR', 'INR' => '₹', 'PKR' => 'Rs', 'CAD' => 'C$', 'AUD' => 'A$', 'CHF' => 'CHF', 'JPY' => '¥', 'CNY' => '¥', 'BRL' => 'R$', 'MXN' => 'MX$'];
+$commonCurrencies = [ // code => [name, symbol]
+    'KES' => ['Kenyan shilling', 'KSh'], 'TZS' => ['Tanzanian shilling', 'TSh'], 'UGX' => ['Ugandan shilling', 'USh'],
+    'RWF' => ['Rwandan franc', 'FRw'], 'BIF' => ['Burundian franc', 'FBu'], 'ETB' => ['Ethiopian birr', 'Br'],
+    'SSP' => ['South Sudanese pound', 'SSP'], 'SOS' => ['Somali shilling', 'Sh'], 'CDF' => ['Congolese franc', 'FC'],
+    'ZMW' => ['Zambian kwacha', 'ZK'], 'MWK' => ['Malawian kwacha', 'MK'], 'MZN' => ['Mozambican metical', 'MT'],
+    'ZAR' => ['South African rand', 'R'], 'BWP' => ['Botswana pula', 'P'], 'NAD' => ['Namibian dollar', 'N$'],
+    'NGN' => ['Nigerian naira', '₦'], 'GHS' => ['Ghanaian cedi', 'GH₵'], 'XOF' => ['West African CFA franc', 'CFA'],
+    'XAF' => ['Central African CFA franc', 'FCFA'], 'EGP' => ['Egyptian pound', 'E£'], 'MAD' => ['Moroccan dirham', 'DH'],
+    'TND' => ['Tunisian dinar', 'DT'], 'DZD' => ['Algerian dinar', 'DA'],
+    'USD' => ['US dollar', '$'], 'EUR' => ['Euro', '€'], 'GBP' => ['British pound', '£'], 'CHF' => ['Swiss franc', 'CHF'],
+    'CAD' => ['Canadian dollar', 'C$'], 'AUD' => ['Australian dollar', 'A$'], 'NZD' => ['New Zealand dollar', 'NZ$'],
+    'TRY' => ['Turkish lira', '₺'], 'RUB' => ['Russian ruble', '₽'], 'UAH' => ['Ukrainian hryvnia', '₴'], 'PLN' => ['Polish złoty', 'zł'],
+    'SEK' => ['Swedish krona', 'kr'], 'NOK' => ['Norwegian krone', 'kr'], 'DKK' => ['Danish krone', 'kr'],
+    'AED' => ['UAE dirham', 'AED'], 'SAR' => ['Saudi riyal', 'SAR'], 'QAR' => ['Qatari riyal', 'QAR'], 'KWD' => ['Kuwaiti dinar', 'KD'],
+    'OMR' => ['Omani rial', 'OMR'], 'BHD' => ['Bahraini dinar', 'BD'], 'JOD' => ['Jordanian dinar', 'JD'], 'ILS' => ['Israeli shekel', '₪'],
+    'INR' => ['Indian rupee', '₹'], 'PKR' => ['Pakistani rupee', 'Rs'], 'BDT' => ['Bangladeshi taka', '৳'], 'LKR' => ['Sri Lankan rupee', 'Rs'],
+    'CNY' => ['Chinese yuan', '¥'], 'JPY' => ['Japanese yen', '¥'], 'KRW' => ['South Korean won', '₩'], 'IDR' => ['Indonesian rupiah', 'Rp'],
+    'MYR' => ['Malaysian ringgit', 'RM'], 'SGD' => ['Singapore dollar', 'S$'], 'THB' => ['Thai baht', '฿'], 'PHP' => ['Philippine peso', '₱'],
+    'VND' => ['Vietnamese dong', '₫'], 'BRL' => ['Brazilian real', 'R$'], 'MXN' => ['Mexican peso', 'MX$'], 'ARS' => ['Argentine peso', 'AR$'],
+    'CLP' => ['Chilean peso', 'CLP$'], 'COP' => ['Colombian peso', 'COL$'],
+];
 $dateFormats = ['Y-m-d' => '2026-12-31', 'd/m/Y' => '31/12/2026', 'm/d/Y' => '12/31/2026', 'd.m.Y' => '31.12.2026', 'd-m-Y' => '31-12-2026'];
 $thousands = [',' => 'Comma ( 1,000 )', '.' => 'Dot ( 1.000 )', ' ' => 'Space ( 1 000 )', "'" => "Apostrophe ( 1'000 )", '' => 'None ( 1000 )'];
 ?>
@@ -130,9 +152,15 @@ $thousands = [',' => 'Comma ( 1,000 )', '.' => 'Dot ( 1.000 )', ' ' => 'Space ( 
         <div class="form-grid">
             <div class="field">
                 <label for="currency_code">Currency code <span class="req">*</span></label>
-                <input type="text" id="currency_code" name="currency_code" value="<?= h(sv('currency_code')); ?>" maxlength="3" list="currencyList" required style="text-transform:uppercase">
-                <datalist id="currencyList"><?php foreach ($commonCurrencies as $code => $sym): ?><option value="<?= h($code); ?>"><?= h($sym); ?></option><?php endforeach; ?></datalist>
-                <span class="hint">3 letters, e.g. USD, EUR, TRY, KES.</span><?= field_error('currency_code'); ?>
+                <?php $curCode = strtoupper(sv('currency_code')); $curKnown = isset($commonCurrencies[$curCode]); ?>
+                <select id="currency_code" name="currency_code" required>
+                    <?php foreach ($commonCurrencies as $code => [$cname, $csym]): ?>
+                    <option value="<?= h($code); ?>" data-symbol="<?= h($csym); ?>"<?= $code === $curCode ? ' selected' : ''; ?>><?= h($code . ' - ' . $cname . ' (' . $csym . ')'); ?></option>
+                    <?php endforeach; ?>
+                    <option value="OTHER"<?= $curKnown ? '' : ' selected'; ?>>Other (type the code)</option>
+                </select>
+                <input type="text" id="currency_code_other" name="currency_code_other" value="<?= $curKnown ? '' : h($curCode); ?>" maxlength="3" placeholder="3-letter code, e.g. XCD" style="text-transform:uppercase;margin-top:8px"<?= $curKnown ? ' hidden' : ''; ?>>
+                <span class="hint">Choosing a currency also fills in its symbol below.</span><?= field_error('currency_code'); ?>
             </div>
             <div class="field"><label for="currency_symbol">Currency symbol</label><input type="text" id="currency_symbol" name="currency_symbol" value="<?= h(sv('currency_symbol')); ?>" maxlength="8"><span class="hint">e.g. $, €, ₺, KSh. Leave empty to show the code.</span></div>
             <div class="field"><label for="currency_position">Symbol position</label><select id="currency_position" name="currency_position"><?= select_options(['before' => 'Before the amount ($ 100)', 'after' => 'After the amount (100 $)'], sv('currency_position')); ?></select></div>
@@ -207,4 +235,20 @@ $thousands = [',' => 'Comma ( 1,000 )', '.' => 'Dot ( 1.000 )', ' ' => 'Space ( 
 <form method="post" id="testEmailForm">
     <input type="hidden" name="action" value="test_email">
 </form>
+<script>
+(function () {
+    var code = document.getElementById('currency_code');
+    var other = document.getElementById('currency_code_other');
+    var symbol = document.getElementById('currency_symbol');
+    if (!code) return;
+    code.addEventListener('change', function () {
+        var opt = code.options[code.selectedIndex];
+        var isOther = code.value === 'OTHER';
+        other.hidden = !isOther;
+        other.required = isOther;
+        if (isOther) { other.focus(); return; }
+        if (symbol && opt.getAttribute('data-symbol')) symbol.value = opt.getAttribute('data-symbol');
+    });
+})();
+</script>
 <?php cr_layout_end(); ?>
