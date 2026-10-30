@@ -99,8 +99,15 @@ function cr_system_checks(?mysqli $conn): array {
         elseif (cr_is_lan_host($host)) $add('Configuration', 'This connection', 'ok', 'Plain HTTP on the office network (' . $host . ').');
         else $add('Configuration', 'This connection', 'fail', 'Plain HTTP over the internet (' . $host . '). Passwords can be read on the way. Use HTTPS.');
     }
-    $add('Configuration', 'Outgoing email', cr_mail_configured() ? 'ok' : 'warn',
-        cr_mail_configured() ? 'SMTP is set up. Use "Send test email to me" in Settings to confirm it works.' : 'Not set up: forgotten passwords cannot be reset by email and no alert emails are sent.');
+    if (!cr_mail_configured()) {
+        $add('Configuration', 'Outgoing email', 'warn', 'Not set up: forgotten passwords cannot be reset by email and no alert emails are sent.');
+    } else {
+        $mailError = cr_mail_login_test();
+        $server = cr_mail_settings()['host'];
+        $add('Configuration', 'Outgoing email', $mailError === null ? 'ok' : 'fail', $mailError === null
+            ? 'Signed in to ' . $server . ' successfully. Use "Send test email to me" in Settings to see a message arrive.'
+            : 'Set up, but signing in to ' . $server . ' failed: ' . $mailError . ' Check the email username and password in Settings (Gmail needs an App password).');
+    }
 
     /* ---------------- Files ---------------- */
     foreach (['' => 'Storage folder', 'logs' => 'Logs folder', 'backups' => 'Backups folder', 'documents' => 'Documents folder'] as $sub => $label) {

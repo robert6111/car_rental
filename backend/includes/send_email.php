@@ -40,27 +40,55 @@ function cr_mail_last_error(?string $set = null): string {
     return $last;
 }
 
+/** A PHPMailer object with the SMTP connection settings filled in. */
+function cr_mailer(): PHPMailer {
+    $cfg = cr_mail_settings();
+    $mail = new PHPMailer(true);
+    $mail->isSMTP();
+    $mail->Host = (string)$cfg['host'];
+    $mail->Port = (int)($cfg['port'] ?: 587);
+    if ((string)($cfg['username'] ?? '') !== '') {
+        $mail->SMTPAuth = true;
+        $mail->Username = (string)$cfg['username'];
+        $mail->Password = (string)($cfg['password'] ?? '');
+    }
+    $encryption = strtolower((string)($cfg['encryption'] ?? 'tls'));
+    if ($encryption === 'ssl') $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+    elseif ($encryption === 'tls') $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    else { $mail->SMTPSecure = ''; $mail->SMTPAutoTLS = false; }
+    $mail->Timeout = 15;
+    return $mail;
+}
+
+/**
+ * Signs in to the mail server without sending anything.
+ * Returns null when the server accepted the login, otherwise the error text.
+ */
+function cr_mail_login_test(): ?string {
+    if (!cr_mail_configured()) return 'Email is not configured.';
+    $cfg = cr_mail_settings();
+    if ((string)($cfg['username'] ?? '') !== '' && (string)($cfg['password'] ?? '') === '') return 'The email password is empty.';
+    try {
+        $mail = cr_mailer();
+        $mail->Timeout = 10;
+        $ok = $mail->smtpConnect();
+        $mail->smtpClose();
+        return $ok ? null : 'Could not sign in to the mail server.';
+    } catch (MailException $e) {
+        return ($mail->ErrorInfo ?? '') !== '' ? $mail->ErrorInfo : $e->getMessage();
+    } catch (Throwable $e) {
+        return $e->getMessage();
+    }
+}
+
 function sendEmail(string $to, string $subject, string $htmlBody, string $textBody = ''): bool {
     if (!cr_mail_configured()) { cr_mail_last_error('Email is not configured.'); return false; }
     $to = trim(str_replace(["\r", "\n"], '', $to));
     if (!filter_var($to, FILTER_VALIDATE_EMAIL)) { cr_mail_last_error('Invalid recipient address.'); return false; }
 
     $cfg = cr_mail_settings();
-    $mail = new PHPMailer(true);
     try {
-        $mail->isSMTP();
-        $mail->Host = (string)$cfg['host'];
-        $mail->Port = (int)($cfg['port'] ?: 587);
-        if ((string)($cfg['username'] ?? '') !== '') {
-            $mail->SMTPAuth = true;
-            $mail->Username = (string)$cfg['username'];
-            $mail->Password = (string)($cfg['password'] ?? '');
-        }
-        $encryption = strtolower((string)($cfg['encryption'] ?? 'tls'));
-        if ($encryption === 'ssl') $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-        elseif ($encryption === 'tls') $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        else { $mail->SMTPSecure = ''; $mail->SMTPAutoTLS = false; }
-        $mail->Timeout = 15;
+        $mail = cr_mailer();
         $mail->CharSet = PHPMailer::CHARSET_UTF8;
 
         $mail->setFrom((string)$cfg['from_email'], (string)$cfg['from_name']);
@@ -73,8 +101,9 @@ function sendEmail(string $to, string $subject, string $htmlBody, string $textBo
         cr_mail_last_error('');
         return true;
     } catch (MailException $e) {
-        cr_mail_last_error($mail->ErrorInfo);
-        error_log('Email to ' . $to . ' failed: ' . $mail->ErrorInfo);
+        $why = ($mail->ErrorInfo ?? '') !== '' ? $mail->ErrorInfo : $e->getMessage();
+        cr_mail_last_error($why);
+        error_log('Email to ' . $to . ' failed: ' . $why);
         return false;
     }
 }
