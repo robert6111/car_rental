@@ -430,7 +430,10 @@ stock_refresh_session_user();
 stock_security_headers();
 stock_enforce_route_access();
 stock_csrf_token();
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+// The public booking form checks its own session-bound token and re-shows the form (with the
+// visitor's details) when it has expired, instead of the bare "Security check failed" page.
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST'
+    && stock_normalized_script_path() !== '/backend/reservations/online_booking.php') {
     stock_validate_csrf();
 }
 stock_start_csrf_injection();

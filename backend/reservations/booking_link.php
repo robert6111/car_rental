@@ -78,6 +78,7 @@ $prefillPhone = trim((string) ($_POST['phone'] ?? ''));
 <?php include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/leftsidebar.php'; ?>
 <div class="content-page">
     <h2>Send WhatsApp Booking Link</h2>
+    <?php if (!cr_setting_bool('public_booking_enabled')): ?><p class="error-msg">Online booking is switched off, so customers who open this link will see a "closed" message.<?php if (stock_has_permission('settings_manage')): ?> <a href="../settings/index.php">Turn it on in Settings</a>.<?php endif; ?></p><?php endif; ?>
     <?php if ($error): ?><p class="error-msg"><?= h($error); ?></p><?php endif; ?>
 
     <div class="card-box" style="border-left:7px solid #16a34a;">
