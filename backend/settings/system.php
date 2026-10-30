@@ -16,13 +16,12 @@ $overall = cr_system_overall($checks);
 $counts = array_count_values(array_column($checks, 'status')) + ['ok' => 0, 'warn' => 0, 'fail' => 0];
 $tone = ['ok' => 'success', 'warn' => 'warning', 'fail' => 'danger'];
 $word = ['ok' => 'OK', 'warn' => 'Check', 'fail' => 'Fix'];
-$icon = ['ok' => 'check-circle', 'warn' => 'alert', 'fail' => 'x-circle'];
 $groups = [];
 foreach ($checks as $c) $groups[$c['group']][] = $c;
 ?>
 <?php cr_layout_start('System check'); ?>
 <?= cr_page_header('System check', 'Is this installation ready to use live? Fix every red item and review the yellow ones.',
-    '<a class="btn btn-secondary" href="system.php">' . cr_icon('refresh') . ' Check again</a>'); ?>
+    '<a class="btn btn-secondary" href="system.php">Check again</a>'); ?>
 
 <?php if ($overall === 'ok'): ?>
     <?= cr_alert('success', 'Everything checks out. The system is ready to use.'); ?>
@@ -40,7 +39,7 @@ foreach ($checks as $c) $groups[$c['group']][] = $c;
             <tbody>
             <?php foreach ($items as $c): ?>
                 <tr>
-                    <td style="width:120px"><span class="badge badge-<?= $tone[$c['status']]; ?>"><?= cr_icon($icon[$c['status']], 'icon-sm'); ?> <?= $word[$c['status']]; ?></span></td>
+                    <td style="width:120px"><span class="badge badge-<?= $tone[$c['status']]; ?>"><?= $word[$c['status']]; ?></span></td>
                     <td style="width:220px"><strong><?= h($c['label']); ?></strong></td>
                     <td><?= h($c['detail']); ?></td>
                 </tr>

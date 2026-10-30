@@ -69,8 +69,8 @@ $completedCars = $conn->query("SELECT rentals.id AS rental_id, cars.id AS car_id
     ORDER BY rentals.end_date DESC, makes.name, models.name, cars.reg_no");
 ?>
 <?php cr_layout_start('Report damage'); ?>
-<a class="back-link" href="list_damage.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All damages</a>
-<?= cr_page_header('Report damage', 'Record damage found on a car after a completed rental.', '<a class="btn btn-secondary" href="list_damage.php">' . cr_icon('list') . ' List car damages</a>'); ?>
+<a class="back-link" href="list_damage.php">All damages</a>
+<?= cr_page_header('Report damage', 'Record damage found on a car after a completed rental.', '<a class="btn btn-secondary" href="list_damage.php">List car damages</a>'); ?>
 <?php if (isset($_SESSION['success'])) { echo cr_alert('success', (string)$_SESSION['success']); unset($_SESSION['success']); } if (isset($_SESSION['error'])) { echo cr_alert('error', (string)$_SESSION['error']); unset($_SESSION['error']); } ?>
 
 <form method="POST" class="card">
@@ -106,7 +106,7 @@ $completedCars = $conn->query("SELECT rentals.id AS rental_id, cars.id AS car_id
         </div>
     </div>
     <div class="form-actions">
-        <button type="submit"><?= cr_icon('check'); ?> Save damage report</button>
+        <button type="submit">Save damage report</button>
         <a class="btn btn-secondary" href="list_damage.php">Cancel</a>
     </div>
 </form>

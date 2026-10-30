@@ -2,7 +2,7 @@
 
 Back-office system for a car rental business, with a public booking form.
 Plain PHP 8.0+ and MySQL / MariaDB. It needs no internet connection: every
-font, icon and script is served by the system itself, so it runs both on web
+style and script is served by the system itself, so it runs both on web
 hosting and on an office network (XAMPP).
 
 Installation, HTTPS and web server rules, the scheduled task, backups, the go-live
@@ -66,6 +66,6 @@ system reachable from the internet.
 - Database changes: bump `CR_SCHEMA_VERSION` in `backend/includes/schema.php` and
   add the migration there; update `database.sql` to match.
 - Pages use `cr_layout_start()` / `cr_layout_end()` (`backend/includes/layout.php`);
-  styles live in `backend/includes/css/app.css`, icons in
-  `backend/includes/images/icons.svg` (`cr_icon('name')`).
+  styles live in `backend/includes/css/app.css`. The top menu is defined in
+  `cr_nav_items()`. The interface uses text labels only (no icons).
 - Rental, return and interest rules live in `backend/includes/rental_status.php`.

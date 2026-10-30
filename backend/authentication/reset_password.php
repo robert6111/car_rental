@@ -67,5 +67,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $user) {
     </div>
 </form>
 <?php endif; ?>
-<p class="auth-links"><a href="login.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> Back to sign in</a></p>
+<p class="auth-links"><a href="login.php">Back to sign in</a></p>
 <?php cr_auth_end(); ?>

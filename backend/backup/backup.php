@@ -17,7 +17,7 @@ $files = glob(cr_storage_path('backups') . '/*.sql') ?: [];
 rsort($files);
 ?>
 <?php cr_layout_start('Backups'); ?>
-<?= cr_page_header('Database backups', 'Make a copy of the database and download earlier copies.', '<form method="post" class="mb-0"><button type="submit">' . cr_icon('database') . ' Back up now</button></form>'); ?>
+<?= cr_page_header('Database backups', 'Make a copy of the database and download earlier copies.', '<form method="post" class="mb-0"><button type="submit">Back up now</button></form>'); ?>
 <?= cr_alerts($msg, $error); ?>
 <?= cr_alert('info', 'Automatic backups are made once a day and kept for ' . (int)cr_setting('backup_keep_days') . ' days (change this in Settings). Manual backups are kept until you delete the file. Copy backups to another computer or drive regularly.'); ?>
 
@@ -33,7 +33,7 @@ rsort($files);
                     <td><span class="cell-title"><?= h(basename($f)); ?></span></td>
                     <td class="num"><?php $kb = filesize($f) / 1024; echo h($kb >= 1024 ? cr_number($kb / 1024, 1) . ' MB' : cr_number($kb, 0) . ' KB'); ?></td>
                     <td class="nowrap"><?= h(cr_date(date('Y-m-d', filemtime($f))) . ' ' . date('H:i', filemtime($f))); ?></td>
-                    <td class="actions-cell"><a class="btn btn-sm btn-secondary" href="<?= h(stock_action_url('download.php?file=' . urlencode(basename($f)))); ?>"><?= cr_icon('download', 'icon-sm'); ?> Download</a></td>
+                    <td class="actions-cell"><a class="btn btn-sm btn-secondary" href="<?= h(stock_action_url('download.php?file=' . urlencode(basename($f)))); ?>">Download</a></td>
                 </tr>
             <?php endforeach; else: ?>
                 <tr><td colspan="5" class="table-empty">No backups yet.</td></tr>

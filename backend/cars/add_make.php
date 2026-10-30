@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <input type="text" id="make_name" name="make_name" maxlength="50" value="<?= h($error ? $make : '') ?>" required>
     </div>
     <div class="form-actions">
-        <button type="submit"><?= cr_icon('plus'); ?> Add make</button>
+        <button type="submit">Add make</button>
     </div>
 </form>
 <?php cr_layout_end(); ?>

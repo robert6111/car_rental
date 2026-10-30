@@ -123,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 .pricing-summary .discount-line { color: var(--success); }
 .pricing-summary .total-line { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 8px; font-size: 15px; }
 </style>']); ?>
-<a class="back-link" href="manage.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All rentals</a>
+<a class="back-link" href="manage.php">All rentals</a>
 <?= cr_page_header('New rental', 'Book a car for a customer. The price is worked out from the dates and the car\'s daily rate.'); ?>
 <?= cr_alerts($msg, $error); ?>
 
@@ -205,7 +205,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <div class="form-actions">
-        <button type="submit"><?= cr_icon('check'); ?> Add rental</button>
+        <button type="submit">Add rental</button>
         <a class="btn btn-secondary" href="manage.php">Cancel</a>
     </div>
 </form>

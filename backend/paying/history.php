@@ -29,14 +29,14 @@ $totalCost = (float)$summary['total_cost'];
 ?>
 <?php $owed = (float)$bill['remaining'] > 0; ?>
 <?php cr_layout_start('Payment history'); ?>
-<a class="back-link" href="manage.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All payments</a>
+<a class="back-link" href="manage.php">All payments</a>
 <?= cr_page_header('Payment history – rental #' . $summary['rental_id'], 'Every payment and late-interest charge for this rental.'); ?>
 
 <div class="stats">
-    <div class="stat <?= (float)$bill['late_interest'] > 0 ? 'tone-warning' : 'tone-neutral'; ?>"><div class="stat-icon"><?= cr_icon('clock'); ?></div><div><div class="stat-label">Late interest · <?= h($bill['late_days']); ?> late day(s)</div><div class="stat-value"><?= money((float)$bill['late_interest']); ?></div></div></div>
-    <div class="stat"><div class="stat-icon"><?= cr_icon('wallet'); ?></div><div><div class="stat-label">Total due</div><div class="stat-value"><?= money((float)$bill['grand_total']); ?></div></div></div>
-    <div class="stat tone-success"><div class="stat-icon"><?= cr_icon('check-circle'); ?></div><div><div class="stat-label">Total paid</div><div class="stat-value"><?= money((float)$summary['total_paid']); ?></div></div></div>
-    <div class="stat <?= $owed ? 'tone-danger' : 'tone-success'; ?>"><div class="stat-icon"><?= cr_icon($owed ? 'alert' : 'check'); ?></div><div><div class="stat-label">Remaining</div><div class="stat-value<?= $owed ? ' text-danger' : ''; ?>"><?= money((float)$bill['remaining']); ?></div></div></div>
+    <div class="stat <?= (float)$bill['late_interest'] > 0 ? 'tone-warning' : 'tone-neutral'; ?>"><div><div class="stat-label">Late interest · <?= h($bill['late_days']); ?> late day(s)</div><div class="stat-value"><?= money((float)$bill['late_interest']); ?></div></div></div>
+    <div class="stat"><div><div class="stat-label">Total due</div><div class="stat-value"><?= money((float)$bill['grand_total']); ?></div></div></div>
+    <div class="stat tone-success"><div><div class="stat-label">Total paid</div><div class="stat-value"><?= money((float)$summary['total_paid']); ?></div></div></div>
+    <div class="stat <?= $owed ? 'tone-danger' : 'tone-success'; ?>"><div><div class="stat-label">Remaining</div><div class="stat-value<?= $owed ? ' text-danger' : ''; ?>"><?= money((float)$bill['remaining']); ?></div></div></div>
 </div>
 
 <div class="card">

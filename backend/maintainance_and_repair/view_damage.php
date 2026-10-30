@@ -7,8 +7,8 @@ if (!$result || $result->num_rows === 0) { $_SESSION['error'] = "Damage record n
 $damage = $result->fetch_assoc();
 ?>
 <?php cr_layout_start('Damage details'); ?>
-<a class="back-link" href="list_damage.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All damages</a>
-<?= cr_page_header('Damage #' . (int)$damage['id'], 'Damage report details and repair status.', '<a class="btn" href="edit_damage.php?id=' . (int)$damage['id'] . '">' . cr_icon('edit') . ' Edit</a>'); ?>
+<a class="back-link" href="list_damage.php">All damages</a>
+<?= cr_page_header('Damage #' . (int)$damage['id'], 'Damage report details and repair status.', '<a class="btn" href="edit_damage.php?id=' . (int)$damage['id'] . '">Edit</a>'); ?>
 
 <div class="grid grid-2">
     <div class="card">

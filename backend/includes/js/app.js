@@ -1,4 +1,4 @@
-/* Car Rental - shared page behaviour (menu, user menu, theme, confirmations). No libraries. */
+/* Car Rental - shared page behaviour (menus, theme, confirmations). No libraries. */
 (function () {
     'use strict';
     var root = document.documentElement;
@@ -10,12 +10,10 @@
         if (set) return set;
         return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
-    function paintThemeButton() {
-        var dark = currentTheme() === 'dark';
-        document.querySelectorAll('.theme-icon-dark').forEach(function (el) { el.hidden = dark; });
-        document.querySelectorAll('.theme-icon-light').forEach(function (el) { el.hidden = !dark; });
-    }
     var themeBtn = document.getElementById('themeToggle');
+    function paintThemeButton() {
+        if (themeBtn) themeBtn.textContent = currentTheme() === 'dark' ? 'Light mode' : 'Dark mode';
+    }
     if (themeBtn) {
         themeBtn.addEventListener('click', function () {
             var next = currentTheme() === 'dark' ? 'light' : 'dark';
@@ -26,33 +24,43 @@
         paintThemeButton();
     }
 
-    /* Side menu on small screens. */
-    var navToggle = document.getElementById('navToggle');
-    var overlay = document.getElementById('navOverlay');
-    function setNav(open) {
-        body.classList.toggle('nav-open', open);
-        if (navToggle) navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    /* Drop-down menus in the top bar: <button data-menu="id"> opens <ul id="id">. One open at a time. */
+    var menuButtons = document.querySelectorAll('[data-menu]');
+    function closeMenus(except) {
+        menuButtons.forEach(function (b) {
+            if (b === except) return;
+            b.setAttribute('aria-expanded', 'false');
+            var m = document.getElementById(b.getAttribute('data-menu'));
+            if (m) m.classList.remove('open');
+        });
     }
-    if (navToggle) navToggle.addEventListener('click', function () { setNav(!body.classList.contains('nav-open')); });
-    if (overlay) overlay.addEventListener('click', function () { setNav(false); });
-
-    /* User menu. */
-    var userBtn = document.getElementById('userMenuBtn');
-    var userMenu = document.getElementById('userMenu');
-    function setUserMenu(open) {
-        if (!userMenu) return;
-        userMenu.classList.toggle('open', open);
-        if (userBtn) userBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    }
-    if (userBtn) userBtn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        setUserMenu(!userMenu.classList.contains('open'));
+    menuButtons.forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var menu = document.getElementById(btn.getAttribute('data-menu'));
+            if (!menu) return;
+            var open = !menu.classList.contains('open');
+            closeMenus(btn);
+            menu.classList.toggle('open', open);
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
     });
     document.addEventListener('click', function (e) {
-        if (userMenu && !e.target.closest('.user-menu')) setUserMenu(false);
+        if (!e.target.closest('.nav-menu')) closeMenus(null);
     });
+
+    /* Whole menu on small screens. */
+    var navToggle = document.getElementById('navToggle');
+    function setNav(open) {
+        body.classList.toggle('nav-open', open);
+        if (navToggle) {
+            navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            navToggle.textContent = open ? 'Close' : 'Menu';
+        }
+    }
+    if (navToggle) navToggle.addEventListener('click', function () { setNav(!body.classList.contains('nav-open')); });
     document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') { setUserMenu(false); setNav(false); }
+        if (e.key === 'Escape') { closeMenus(null); setNav(false); }
     });
 
     /* Ask before dangerous actions: <a data-confirm="Delete this car?"> or <button data-confirm="...">. */
@@ -72,7 +80,7 @@
             var show = input.type === 'password';
             input.type = show ? 'text' : 'password';
             btn.setAttribute('aria-pressed', show ? 'true' : 'false');
-            btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+            btn.textContent = show ? 'Hide' : 'Show';
         });
     });
 

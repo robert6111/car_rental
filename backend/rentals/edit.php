@@ -177,7 +177,7 @@ $cars = $carStmt->get_result();
 $carStmt->close();
 ?>
 <?php cr_layout_start('Edit rental'); ?>
-<a class="back-link" href="manage.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All rentals</a>
+<a class="back-link" href="manage.php">All rentals</a>
 <?= cr_page_header('Edit rental #' . $id, 'Change the customer, car, dates or status of this rental.'); ?>
 <?= cr_alerts($msg, $error); ?>
 
@@ -231,7 +231,7 @@ $carStmt->close();
     </div>
 
     <div class="form-actions">
-        <button type="submit"><?= cr_icon('check'); ?> Save changes</button>
+        <button type="submit">Save changes</button>
         <a class="btn btn-secondary" href="manage.php">Cancel</a>
     </div>
 </form>

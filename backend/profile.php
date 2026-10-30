@@ -9,7 +9,7 @@ $user = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 ?>
 <?php cr_layout_start('My profile'); ?>
-<?= cr_page_header('My profile', 'Your sign-in details.', '<a class="btn" href="' . h(app_url('change_password.php')) . '">' . cr_icon('key') . ' Change password</a>'); ?>
+<?= cr_page_header('My profile', 'Your sign-in details.', '<a class="btn" href="' . h(app_url('change_password.php')) . '">Change password</a>'); ?>
 
 <div class="card card-narrow">
     <dl class="details">

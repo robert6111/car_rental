@@ -77,7 +77,7 @@ $makes = $conn->query("SELECT id, name FROM makes ORDER BY name ASC");
         </div>
     </div>
     <div class="form-actions">
-        <button type="submit"><?= cr_icon('plus'); ?> Add model</button>
+        <button type="submit">Add model</button>
     </div>
 </form>
 <?php cr_layout_end(); ?>

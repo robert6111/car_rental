@@ -56,7 +56,7 @@ $pg = cr_page_count($conn, cr_page(), "SELECT COUNT(*) FROM customers");
 $result = $conn->query("SELECT c.*, (SELECT COUNT(*) FROM rentals r WHERE r.customer_id=c.id AND r.status='Completed') AS completed_rentals FROM customers c ORDER BY c.id DESC" . cr_page_sql($pg));
 ?>
 <?php cr_layout_start('Customers'); ?>
-<?= cr_page_header('Customers', 'Everyone registered to rent a car.', '<a class="btn" href="add.php">' . cr_icon('user-plus') . ' Add customer</a>'); ?>
+<?= cr_page_header('Customers', 'Everyone registered to rent a car.', '<a class="btn" href="add.php">Add customer</a>'); ?>
 <?= cr_alerts($msg, $error); ?>
 
 <div class="card">
@@ -86,10 +86,10 @@ $result = $conn->query("SELECT c.*, (SELECT COUNT(*) FROM rentals r WHERE r.cust
                         <td class="nowrap">Licence: <?= h(cr_date($row['license_expiry'] ?? '') ?: '—') ?><span class="cell-sub">Passport: <?= h(cr_date($row['passport_expiry'] ?? '') ?: '—') ?></span></td>
                         <td><?php if (loyalty_discount_fraction() > 0 && (int)$row['completed_rentals'] >= loyalty_min_rentals()): ?><?= cr_status_badge('Active', 'Loyal (' . (loyalty_discount_fraction() * 100) . '% discount)') ?><?php else: ?><span class="muted"><?= h($row['completed_rentals'] . ' completed rentals') ?></span><?php endif; ?></td>
                         <td class="actions-cell">
-                            <a href="edit.php?id=<?= (int)$row['id'] ?>" class="btn btn-sm btn-secondary"><?= cr_icon('edit', 'icon-sm') ?> Edit</a>
+                            <a href="edit.php?id=<?= (int)$row['id'] ?>" class="btn btn-sm btn-secondary">Edit</a>
                             <a href="<?= h(stock_action_url('customer.php?action=del&customer_id=' . (int)$row['id'])); ?>"
                                data-confirm="Delete this customer? Customers with rental history cannot be deleted."
-                               class="btn btn-sm btn-danger"><?= cr_icon('trash', 'icon-sm') ?> Delete</a>
+                               class="btn btn-sm btn-danger">Delete</a>
                         </td>
                     </tr>
                 <?php endwhile; ?>

@@ -13,14 +13,14 @@ $result=$stmt->get_result();
 $stmt->close();
 ?>
 <?php cr_layout_start('Service records'); ?>
-<?= cr_page_header('Service records', 'Service and maintenance history for every car.', '<a class="btn" href="service.php">' . cr_icon('plus') . ' Add service record</a>'); ?>
+<?= cr_page_header('Service records', 'Service and maintenance history for every car.', '<a class="btn" href="service.php">Add service record</a>'); ?>
 
 <form method="GET" class="filters">
     <div class="field grow">
         <label for="q">Search car / reg no / service</label>
         <input type="text" id="q" name="q" value="<?= h($q); ?>" placeholder="Oil change, 34 ABC 123">
     </div>
-    <button type="submit"><?= cr_icon('search'); ?> Search</button>
+    <button type="submit">Search</button>
     <a class="btn btn-secondary" href="service_list.php">Clear</a>
 </form>
 

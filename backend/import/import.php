@@ -245,7 +245,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
         <div class="form-actions">
-            <button type="submit"><?= cr_icon('upload'); ?> Import</button>
+            <button type="submit">Import</button>
         </div>
     </form>
 

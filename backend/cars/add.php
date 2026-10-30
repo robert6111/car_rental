@@ -46,7 +46,7 @@ if ($selMake > 0) {
 }
 ?>
 <?php cr_layout_start('Add car'); ?>
-<a class="back-link" href="all_cars.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All cars</a>
+<a class="back-link" href="all_cars.php">All cars</a>
 <?= cr_page_header('Add car', 'Add a car to the fleet so it can be rented out.'); ?>
 <?= cr_alerts($msg, $error); ?>
 
@@ -146,7 +146,7 @@ if ($selMake > 0) {
     </div>
 
     <div class="form-actions">
-        <button type="submit"><?= cr_icon('check'); ?> Add car</button>
+        <button type="submit">Add car</button>
         <a class="btn btn-secondary" href="all_cars.php">Cancel</a>
     </div>
 </form>

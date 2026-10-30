@@ -101,10 +101,10 @@ cr_layout_start(cr_not_returned_title());
                         <?php if($o['open_case']): ?>
                             <?= cr_status_badge('Open', 'Case ' . $o['open_case'] . ' open') ?>
                         <?php else: ?>
-                            <a class="btn btn-sm btn-danger" href="<?= h(stock_action_url('not_returned.php?create=' . (int)$o['id'])) ?>"><?= cr_icon('alert', 'icon-sm') ?> Open case</a>
+                            <a class="btn btn-sm btn-danger" href="<?= h(stock_action_url('not_returned.php?create=' . (int)$o['id'])) ?>">Open case</a>
                         <?php endif; ?>
                         <details class="row-form">
-                            <summary class="btn btn-sm btn-success"><?= cr_icon('check', 'icon-sm') ?> Confirm return</summary>
+                            <summary class="btn btn-sm btn-success">Confirm return</summary>
                             <form method="POST" action="manage.php" class="row-form-body">
                                 <input type="hidden" name="back" value="not_returned.php">
                                 <input type="hidden" name="rental_id" value="<?= (int)$o['id'] ?>">
@@ -151,7 +151,7 @@ cr_layout_start(cr_not_returned_title());
                     <td><?= nl2br(h($c['notes'])) ?></td>
                     <td class="actions-cell">
                         <?php if(!in_array($c['status'], ['Resolved','Closed'], true)): ?>
-                            <a class="btn btn-sm btn-success" href="<?= h(stock_action_url('not_returned.php?resolve=' . (int)$c['id'])) ?>"><?= cr_icon('check', 'icon-sm') ?> Resolve</a>
+                            <a class="btn btn-sm btn-success" href="<?= h(stock_action_url('not_returned.php?resolve=' . (int)$c['id'])) ?>">Resolve</a>
                         <?php endif; ?>
                     </td>
                 </tr>

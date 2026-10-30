@@ -55,7 +55,7 @@ $years_result = $conn->query("SELECT id, year FROM car_years ORDER BY year DESC"
             <span class="hint">Between <?= $minYear ?> and <?= $maxYear ?>.</span>
         </div>
         <div class="form-actions">
-            <button type="submit"><?= cr_icon('plus'); ?> Add year</button>
+            <button type="submit">Add year</button>
         </div>
     </form>
 

@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <?php cr_layout_start('Change password'); ?>
-<a class="back-link" href="<?= h(app_url('profile.php')); ?>"><?= cr_icon('arrow-left', 'icon-sm'); ?> My profile</a>
+<a class="back-link" href="<?= h(app_url('profile.php')); ?>">My profile</a>
 <?= cr_page_header('Change password', 'Other devices are signed out after the change.'); ?>
 <?= cr_alerts($msg, $error); ?>
 
@@ -44,14 +44,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label for="current_password">Current password <span class="req">*</span></label>
         <div class="password-wrap">
             <input type="password" id="current_password" name="current_password" autocomplete="current-password" required>
-            <button type="button" class="password-toggle" data-password-toggle="current_password" aria-label="Show password"><?= cr_icon('eye'); ?></button>
+            <button type="button" class="password-toggle" data-password-toggle="current_password" aria-pressed="false">Show</button>
         </div>
     </div>
     <div class="field mt-4">
         <label for="new_password">New password <span class="req">*</span></label>
         <div class="password-wrap">
             <input type="password" id="new_password" name="new_password" minlength="10" maxlength="72" autocomplete="new-password" required>
-            <button type="button" class="password-toggle" data-password-toggle="new_password" aria-label="Show password"><?= cr_icon('eye'); ?></button>
+            <button type="button" class="password-toggle" data-password-toggle="new_password" aria-pressed="false">Show</button>
         </div>
         <span class="hint">At least 10 characters.</span>
     </div>
@@ -59,11 +59,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label for="confirm_password">Confirm new password <span class="req">*</span></label>
         <div class="password-wrap">
             <input type="password" id="confirm_password" name="confirm_password" minlength="10" maxlength="72" autocomplete="new-password" required>
-            <button type="button" class="password-toggle" data-password-toggle="confirm_password" aria-label="Show password"><?= cr_icon('eye'); ?></button>
+            <button type="button" class="password-toggle" data-password-toggle="confirm_password" aria-pressed="false">Show</button>
         </div>
     </div>
     <div class="form-actions">
-        <button type="submit"><?= cr_icon('key'); ?> Update password</button>
+        <button type="submit">Update password</button>
         <a class="btn btn-secondary" href="<?= h(app_url('profile.php')); ?>">Cancel</a>
     </div>
 </form>

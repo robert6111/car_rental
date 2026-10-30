@@ -244,8 +244,8 @@ if ($stmt) {
 ?>
 <?php cr_layout_start('Reservations and waitlist'); ?>
 <?= cr_page_header('Reservations and waitlist', 'Book cars ahead of time, handle online requests and turn reservations into rentals.',
-    '<a href="booking_link.php" class="btn btn-success">' . cr_icon('whatsapp') . ' Send booking link</a>'
-    . '<a href="online_booking.php" class="btn btn-secondary" target="_blank" rel="noopener">' . cr_icon('external') . ' Public booking form</a>'); ?>
+    '<a href="booking_link.php" class="btn btn-success">Send booking link</a>'
+    . '<a href="online_booking.php" class="btn btn-secondary" target="_blank" rel="noopener">Public booking form</a>'); ?>
 <?= cr_alerts($msg, $error); ?>
 
 <form method="POST" class="card">
@@ -300,7 +300,7 @@ if ($stmt) {
         </div>
     </div>
     <div class="form-actions">
-        <button type="submit" name="save_reservation"><?= cr_icon('check'); ?> Save reservation</button>
+        <button type="submit" name="save_reservation">Save reservation</button>
     </div>
 </form>
 
@@ -318,7 +318,7 @@ if ($stmt) {
                 <?php foreach ($allStatuses as $s): ?><option <?= $status === $s ? 'selected' : ''; ?>><?= h($s); ?></option><?php endforeach; ?>
             </select>
         </div>
-        <button type="submit"><?= cr_icon('search'); ?> Filter</button>
+        <button type="submit">Filter</button>
         <a href="manage.php" class="btn btn-secondary">Clear</a>
     </form>
     <div class="table-wrap">
@@ -343,10 +343,10 @@ if ($stmt) {
                     <td><?= cr_status_badge((string)$r['status']); ?></td>
                     <td><div class="actions">
                         <?php if (!in_array($r['status'], ['Cancelled', 'Converted'], true)): ?>
-                            <a class="btn btn-sm <?= $r['customer_id'] ? 'btn-secondary' : 'btn-warning'; ?>" href="link.php?id=<?= (int)$r['id']; ?>"><?= cr_icon('link', 'icon-sm'); ?> <?= $r['customer_id'] ? 'Change customer' : 'Link customer'; ?></a>
+                            <a class="btn btn-sm <?= $r['customer_id'] ? 'btn-secondary' : 'btn-warning'; ?>" href="link.php?id=<?= (int)$r['id']; ?>"><?= $r['customer_id'] ? 'Change customer' : 'Link customer'; ?></a>
                         <?php endif; ?>
                         <?php if (in_array($r['status'], ['Waitlisted', 'Pending'], true)): ?>
-                            <a class="btn btn-sm btn-success" href="<?= h(stock_action_url('manage.php?action=confirm&id=' . (int)$r['id'])); ?>"><?= cr_icon('check', 'icon-sm'); ?> Confirm</a>
+                            <a class="btn btn-sm btn-success" href="<?= h(stock_action_url('manage.php?action=confirm&id=' . (int)$r['id'])); ?>">Confirm</a>
                         <?php endif; ?>
                         <?php if (in_array($r['status'], ['Confirmed', 'Pending'], true)): ?>
                             <a class="btn btn-sm" href="<?= h(stock_action_url('manage.php?action=convert&id=' . (int)$r['id'])); ?>">Convert to rental</a>

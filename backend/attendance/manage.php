@@ -73,7 +73,7 @@ $list=$conn->query("SELECT a.*,u.username FROM attendance a JOIN users u ON a.us
         </div>
     </div>
     <div class="form-actions">
-        <button type="submit"><?= cr_icon('check'); ?> Save attendance</button>
+        <button type="submit">Save attendance</button>
     </div>
 </form>
 

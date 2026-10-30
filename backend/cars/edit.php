@@ -82,7 +82,7 @@ $models = $model_stmt->get_result();
 $model_stmt->close();
 ?>
 <?php cr_layout_start('Edit car'); ?>
-<a class="back-link" href="all_cars.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All cars</a>
+<a class="back-link" href="all_cars.php">All cars</a>
 <?= cr_page_header('Edit car', 'Update the details, price and papers of this car.'); ?>
 <?= cr_alerts('', $error); ?>
 
@@ -184,7 +184,7 @@ $model_stmt->close();
     </div>
 
     <div class="form-actions">
-        <button type="submit"><?= cr_icon('check'); ?> Save changes</button>
+        <button type="submit">Save changes</button>
         <a class="btn btn-secondary" href="all_cars.php">Cancel</a>
     </div>
 </form>

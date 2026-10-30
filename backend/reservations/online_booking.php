@@ -247,12 +247,12 @@ $maxDate = date('Y-m-d', strtotime($today . ' +1 year'));
             </div>
         </div>
         <div class="form-actions">
-            <button type="submit" class="btn-block"><?= cr_icon('calendar-check'); ?> Send booking request</button>
+            <button type="submit" class="btn-block">Send booking request</button>
         </div>
     </form>
 <?php endif; ?>
 <?php
 $contact = '';
-if ($companyPhone !== '') $contact .= cr_icon('phone', 'icon-sm') . ' <a href="tel:' . h(preg_replace('/[^0-9+]/', '', $companyPhone)) . '">' . h($companyPhone) . '</a>';
-if ($companyEmail !== '') $contact .= ($contact ? ' &nbsp;·&nbsp; ' : '') . cr_icon('mail', 'icon-sm') . ' <a href="mailto:' . h($companyEmail) . '">' . h($companyEmail) . '</a>';
+if ($companyPhone !== '') $contact .= '<a href="tel:' . h(preg_replace('/[^0-9+]/', '', $companyPhone)) . '">' . h($companyPhone) . '</a>';
+if ($companyEmail !== '') $contact .= ($contact ? ' &nbsp;·&nbsp; ' : '') . '<a href="mailto:' . h($companyEmail) . '">' . h($companyEmail) . '</a>';
 cr_auth_end($contact !== '' ? 'Questions? ' . $contact : '');

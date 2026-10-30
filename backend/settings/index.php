@@ -201,7 +201,7 @@ $thousands = [',' => 'Comma ( 1,000 )', '.' => 'Dot ( 1.000 )', ' ' => 'Space ( 
             <div class="field"><label for="mail_from_name">Sender name</label><input type="text" id="mail_from_name" name="mail_from_name" value="<?= h(sv('mail_from_name')); ?>" placeholder="<?= h(cr_company_name()); ?>"></div>
         </div>
         <div class="row-flex mt-4">
-            <button type="submit" form="testEmailForm" class="btn btn-secondary"><?= cr_icon('mail'); ?> Send test email to me</button>
+            <button type="submit" form="testEmailForm" class="btn btn-secondary">Send test email to me</button>
             <span class="hint mt-0">Save your changes first. Password-reset emails also need the System address below.</span>
         </div>
     </section>
@@ -225,7 +225,7 @@ $thousands = [',' => 'Comma ( 1,000 )', '.' => 'Dot ( 1.000 )', ' ' => 'Space ( 
     </section>
 
     <div class="settings-actions">
-        <button type="submit"><?= cr_icon('check'); ?> Save settings</button>
+        <button type="submit">Save settings</button>
     </div>
 </form>
 

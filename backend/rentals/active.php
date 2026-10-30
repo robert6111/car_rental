@@ -49,7 +49,7 @@ if ($stmt) {
 $today = cr_today();
 ?>
 <?php cr_layout_start('Active rentals'); ?>
-<?= cr_page_header('Active rentals', 'Cars that are out with customers right now. Confirm the return when a car comes back.', '<a class="btn btn-secondary" href="manage.php">' . cr_icon('list') . ' All rentals</a>'); ?>
+<?= cr_page_header('Active rentals', 'Cars that are out with customers right now. Confirm the return when a car comes back.', '<a class="btn btn-secondary" href="manage.php">All rentals</a>'); ?>
 <?= cr_alerts($msg, $error); ?>
 
 <div class="card card-flush">
@@ -59,7 +59,7 @@ $today = cr_today();
                 <label for="q">Search</label>
                 <input type="text" id="q" name="q" value="<?= h($q); ?>" placeholder="Reg no, customer, make or model">
             </div>
-            <button type="submit"><?= cr_icon('search'); ?> Filter</button>
+            <button type="submit">Filter</button>
             <a class="btn btn-secondary" href="active.php">Clear</a>
         </form>
     </div>
@@ -95,7 +95,7 @@ $today = cr_today();
                     </td>
                     <td class="actions-cell">
                         <details class="row-form">
-                            <summary class="btn btn-sm btn-success"><?= cr_icon('check', 'icon-sm') ?> Confirm return</summary>
+                            <summary class="btn btn-sm btn-success">Confirm return</summary>
                             <form method="POST" action="manage.php" class="row-form-body">
                                 <input type="hidden" name="back" value="active.php">
                                 <input type="hidden" name="rental_id" value="<?= (int)$row['id'] ?>">

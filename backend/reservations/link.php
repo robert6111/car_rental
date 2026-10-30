@@ -102,7 +102,7 @@ if ($where) {
 $allCustomers = $conn->query('SELECT id, full_name, phone_number FROM customers ORDER BY full_name');
 ?>
 <?php cr_layout_start('Link customer'); ?>
-<a class="back-link" href="manage.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All reservations</a>
+<a class="back-link" href="manage.php">All reservations</a>
 <?= cr_page_header('Link booking request #' . (int)$id . ' to a customer', 'Check the person first, then link an existing customer or create a new one.'); ?>
 <?= cr_alerts('', $error); ?>
 
@@ -137,7 +137,7 @@ $allCustomers = $conn->query('SELECT id, full_name, phone_number FROM customers 
                         <td class="actions-cell text-right">
                             <form method="POST" class="mb-0">
                                 <input type="hidden" name="customer_id" value="<?= (int)$m['id']; ?>">
-                                <button type="submit" name="link_existing" value="1" class="btn-sm"><?= cr_icon('link', 'icon-sm'); ?> Link</button>
+                                <button type="submit" name="link_existing" value="1" class="btn-sm">Link</button>
                             </form>
                         </td>
                     </tr>
@@ -158,7 +158,7 @@ $allCustomers = $conn->query('SELECT id, full_name, phone_number FROM customers 
                 <?php endwhile; ?>
             </select>
         </div>
-        <button type="submit" name="link_existing" value="1"><?= cr_icon('link'); ?> Link customer</button>
+        <button type="submit" name="link_existing" value="1">Link customer</button>
     </form>
 </div>
 
@@ -208,7 +208,7 @@ $allCustomers = $conn->query('SELECT id, full_name, phone_number FROM customers 
         </div>
     </div>
     <div class="form-actions">
-        <button type="submit" name="create_customer" value="1"><?= cr_icon('user-plus'); ?> Create customer and link</button>
+        <button type="submit" name="create_customer" value="1">Create customer and link</button>
         <a class="btn btn-secondary" href="manage.php">Cancel</a>
     </div>
 </form>

@@ -15,7 +15,7 @@ $damages = $stmt->get_result();
 $stmt->close();
 ?>
 <?php cr_layout_start('Damages'); ?>
-<?= cr_page_header('Damages', 'Damage reports linked to cars and the rentals they came back from.', '<a class="btn" href="damage.php">' . cr_icon('plus') . ' Report damage</a>'); ?>
+<?= cr_page_header('Damages', 'Damage reports linked to cars and the rentals they came back from.', '<a class="btn" href="damage.php">Report damage</a>'); ?>
 <?php foreach (['success' => 'success', 'error' => 'error'] as $flashKey => $flashType): if (!empty($_SESSION[$flashKey])): ?><?= cr_alert($flashType, (string)$_SESSION[$flashKey]); ?><?php unset($_SESSION[$flashKey]); endif; endforeach; ?>
 
 <form method="GET" class="filters">
@@ -40,7 +40,7 @@ $stmt->close();
             <option value="1" <?= $filter_repaired === '1' ? 'selected' : '' ?>>Yes</option>
         </select>
     </div>
-    <button type="submit"><?= cr_icon('search'); ?> Filter</button>
+    <button type="submit">Filter</button>
     <a class="btn btn-secondary" href="list_damage.php">Clear</a>
 </form>
 
@@ -61,8 +61,8 @@ $stmt->close();
                     <td class="num"><?= money((float)$row['estimated_cost']) ?></td>
                     <td><?= cr_status_badge($row['repaired'] ? 'Yes' : 'No') ?></td>
                     <td class="actions-cell">
-                        <a class="btn btn-sm btn-secondary" href="view_damage.php?id=<?= h($row['id']) ?>"><?= cr_icon('eye', 'icon-sm'); ?> View</a>
-                        <a class="btn btn-sm btn-secondary" href="edit_damage.php?id=<?= h($row['id']) ?>"><?= cr_icon('edit', 'icon-sm'); ?> Edit</a>
+                        <a class="btn btn-sm btn-secondary" href="view_damage.php?id=<?= h($row['id']) ?>">View</a>
+                        <a class="btn btn-sm btn-secondary" href="edit_damage.php?id=<?= h($row['id']) ?>">Edit</a>
                     </td>
                 </tr>
             <?php endwhile; else: ?>

@@ -53,7 +53,7 @@ if (isset($deleteErrors[$errorCode])) $error = $deleteErrors[$errorCode];
 ?>
 
 <?php cr_layout_start('Manage cars'); ?>
-<?= cr_page_header('Manage cars', 'All cars in the fleet with their papers, price and status.', '<a class="btn" href="add.php">' . cr_icon('plus') . ' Add car</a>'); ?>
+<?= cr_page_header('Manage cars', 'All cars in the fleet with their papers, price and status.', '<a class="btn" href="add.php">Add car</a>'); ?>
 <?= cr_alerts($msg, $error); ?>
 
 <div class="card">
@@ -69,7 +69,7 @@ if (isset($deleteErrors[$errorCode])) $error = $deleteErrors[$errorCode];
                 <?php foreach ($car_statuses as $s): ?><option value="<?= h($s) ?>" <?= ($status_filter ?? '') === $s ? 'selected' : '' ?>><?= h($s) ?></option><?php endforeach; ?>
             </select>
         </div>
-        <button type="submit"><?= cr_icon('search'); ?> Filter</button>
+        <button type="submit">Filter</button>
         <a class="btn btn-secondary" href="all_cars.php">Clear</a>
     </form>
     <div class="table-wrap">
@@ -100,8 +100,8 @@ if (isset($deleteErrors[$errorCode])) $error = $deleteErrors[$errorCode];
                     <td><?= h($row['branch'] ?? '') ?></td>
                     <td class="num"><?= money((float)($row['price_per_day'] ?? 0)) ?></td>
                     <td><div class="actions">
-                        <a class="btn btn-sm btn-secondary" href="edit.php?id=<?= (int)$row['id'] ?>"><?= cr_icon('edit', 'icon-sm') ?> Edit</a>
-                        <a class="btn btn-sm btn-danger" href="<?= h(stock_action_url('delete.php?id=' . (int)$row['id'])); ?>" data-confirm="Delete this car? Cars with any history cannot be deleted."><?= cr_icon('trash', 'icon-sm') ?> Delete</a>
+                        <a class="btn btn-sm btn-secondary" href="edit.php?id=<?= (int)$row['id'] ?>">Edit</a>
+                        <a class="btn btn-sm btn-danger" href="<?= h(stock_action_url('delete.php?id=' . (int)$row['id'])); ?>" data-confirm="Delete this car? Cars with any history cannot be deleted.">Delete</a>
                     </div></td>
                 </tr>
                 <?php endwhile; ?>

@@ -86,7 +86,7 @@ $allCars = $conn->query("
 
 ?>
 <?php cr_layout_start('Add service record'); ?>
-<a class="back-link" href="service_list.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All service records</a>
+<a class="back-link" href="service_list.php">All service records</a>
 <?= cr_page_header('Add service record', 'Record a service or maintenance job done on a car.'); ?>
 <?php
 if (isset($_SESSION['success'])) {
@@ -138,7 +138,7 @@ if (isset($_SESSION['error'])) {
         </div>
     </div>
     <div class="form-actions">
-        <button type="submit"><?= cr_icon('check'); ?> Save service record</button>
+        <button type="submit">Save service record</button>
         <a class="btn btn-secondary" href="service_list.php">Cancel</a>
     </div>
 </form>

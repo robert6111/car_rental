@@ -79,7 +79,7 @@ $listStmt->execute(); $list=$listStmt->get_result();
         </div>
     </div>
     <div class="form-actions">
-        <button type="submit"><?= cr_icon('upload'); ?> Save document</button>
+        <button type="submit">Save document</button>
     </div>
 </form>
 
@@ -88,7 +88,7 @@ $listStmt->execute(); $list=$listStmt->get_result();
         <label for="q">Search</label>
         <input id="q" name="q" value="<?= h($q) ?>" placeholder="Document, customer or reg no">
     </div>
-    <button type="submit"><?= cr_icon('search'); ?> Search</button>
+    <button type="submit">Search</button>
     <a class="btn btn-secondary" href="manage.php">Clear</a>
 </form>
 
@@ -108,7 +108,7 @@ $listStmt->execute(); $list=$listStmt->get_result();
                     <td><?= h($d['full_name']) ?></td>
                     <td><?php if (!empty($d['reg_no'])): ?><span class="plate"><?= h($d['reg_no']) ?></span><?php endif; ?></td>
                     <td class="nowrap"><?= h(cr_date($d['expiry_date'])) ?></td>
-                    <td class="actions-cell"><?= $d['file_path'] ? '<a class="btn btn-sm btn-secondary" target="_blank" rel="noopener" href="' . h('download.php?id=' . (int)$d['id']) . '">' . cr_icon('file', 'icon-sm') . ' Open</a>' : '<span class="muted">No file</span>' ?></td>
+                    <td class="actions-cell"><?= $d['file_path'] ? '<a class="btn btn-sm btn-secondary" target="_blank" rel="noopener" href="' . h('download.php?id=' . (int)$d['id']) . '">Open</a>' : '<span class="muted">No file</span>' ?></td>
                     <td><?= h($d['notes']) ?></td>
                 </tr>
             <?php endwhile; else: ?>

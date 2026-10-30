@@ -83,8 +83,8 @@ $formError = $_SESSION['error'] ?? '';
 unset($_SESSION['error']);
 ?>
 <?php cr_layout_start('Edit damage'); ?>
-<a class="back-link" href="list_damage.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All damages</a>
-<?= cr_page_header('Edit damage #' . (int)$damage['id'], 'Update the damage details and record the repair.', '<a class="btn btn-secondary" href="view_damage.php?id=' . (int)$damage['id'] . '">' . cr_icon('eye') . ' View</a>'); ?>
+<a class="back-link" href="list_damage.php">All damages</a>
+<?= cr_page_header('Edit damage #' . (int)$damage['id'], 'Update the damage details and record the repair.', '<a class="btn btn-secondary" href="view_damage.php?id=' . (int)$damage['id'] . '">View</a>'); ?>
 <?= cr_alert('error', (string)$formError); ?>
 
 <form method="POST" class="card">
@@ -130,7 +130,7 @@ unset($_SESSION['error']);
     </div>
 
     <div class="form-actions">
-        <button type="submit"><?= cr_icon('check'); ?> Save</button>
+        <button type="submit">Save</button>
         <a class="btn btn-secondary" href="list_damage.php">Back</a>
     </div>
 </form>

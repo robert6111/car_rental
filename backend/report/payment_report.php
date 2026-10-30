@@ -67,7 +67,7 @@ $rows = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
 $pdfUrl = 'payment_report_export.php?from_date=' . urlencode($from_date) . '&to_date=' . urlencode($to_date) . '&reg_no=' . urlencode($reg_no);
 cr_layout_start('Payment report');
 ?>
-<?= cr_page_header('Payment report', 'Payments received in a period, with their total.', '<a class="btn btn-secondary" href="' . h($pdfUrl) . '" target="_blank">' . cr_icon('download') . ' Download PDF</a>'); ?>
+<?= cr_page_header('Payment report', 'Payments received in a period, with their total.', '<a class="btn btn-secondary" href="' . h($pdfUrl) . '" target="_blank">Download PDF</a>'); ?>
 
 <div class="card">
     <form method="GET" class="filters mb-0">
@@ -83,14 +83,14 @@ cr_layout_start('Payment report');
             <label for="reg_no">Reg no or customer</label>
             <input type="text" id="reg_no" name="reg_no" value="<?= h($reg_no); ?>" placeholder="Example: 34 ABC 123">
         </div>
-        <button type="submit"><?= cr_icon('search'); ?> Filter</button>
+        <button type="submit">Filter</button>
         <a class="btn btn-secondary" href="payment_report.php">Clear</a>
     </form>
 </div>
 
 <div class="stats">
-    <div class="stat"><div class="stat-icon"><?= cr_icon('receipt'); ?></div><div><div class="stat-label">Payments</div><div class="stat-value"><?= (int)$paymentCount; ?></div></div></div>
-    <div class="stat tone-success"><div class="stat-icon"><?= cr_icon('wallet'); ?></div><div><div class="stat-label">Total received</div><div class="stat-value"><?= money($total); ?></div></div></div>
+    <div class="stat"><div><div class="stat-label">Payments</div><div class="stat-value"><?= (int)$paymentCount; ?></div></div></div>
+    <div class="stat tone-success"><div><div class="stat-label">Total received</div><div class="stat-value"><?= money($total); ?></div></div></div>
 </div>
 
 <div class="card card-flush">

@@ -29,7 +29,7 @@ $list=$conn->query("SELECT * FROM notifications ORDER BY FIELD(status,'Ready','D
 $pageQs=($pg['page']>1?'&page='.(int)$pg['page']:'').(isset($_GET['per_page'])?'&per_page='.(int)$pg['per_page']:'');
 ?>
 <?php cr_layout_start('Notifications'); ?>
-<?= cr_page_header('Notifications', 'Booking reminders, overdue alerts, maintenance and document expiry reminders, and WhatsApp/SMS-ready messages.', '<a class="btn" href="' . h(stock_action_url('?generate=1')) . '">' . cr_icon('refresh') . ' Generate alerts now</a>'); ?>
+<?= cr_page_header('Notifications', 'Booking reminders, overdue alerts, maintenance and document expiry reminders, and WhatsApp/SMS-ready messages.', '<a class="btn" href="' . h(stock_action_url('?generate=1')) . '">Generate alerts now</a>'); ?>
 <?= cr_alert('success', $msg); ?>
 
 <div class="card card-flush">
@@ -48,7 +48,7 @@ $pageQs=($pg['page']>1?'&page='.(int)$pg['page']:'').(isset($_GET['per_page'])?'
                     <td><?= h($n['channel']) ?></td>
                     <td><?= cr_status_badge((string)$n['status']) ?></td>
                     <td class="nowrap"><?= h(cr_date($n['created_at'])) ?></td>
-                    <td class="actions-cell"><?php if ($n['status'] !== 'Read'): ?><a class="btn btn-sm btn-secondary" href="<?= h(stock_action_url('?read=' . (int)$n['id'] . $pageQs)) ?>"><?= cr_icon('check', 'icon-sm'); ?> Mark read</a><?php endif; ?></td>
+                    <td class="actions-cell"><?php if ($n['status'] !== 'Read'): ?><a class="btn btn-sm btn-secondary" href="<?= h(stock_action_url('?read=' . (int)$n['id'] . $pageQs)) ?>">Mark read</a><?php endif; ?></td>
                 </tr>
             <?php endwhile; else: ?>
                 <tr><td colspan="7" class="table-empty">No notifications yet.</td></tr>

@@ -81,7 +81,7 @@ $lateRate = late_interest_daily_fraction();
                 <label for="q">Search</label>
                 <input type="text" id="q" name="q" value="<?= h($q); ?>" placeholder="Reg no or customer">
             </div>
-            <button type="submit"><?= cr_icon('search'); ?> Filter</button>
+            <button type="submit">Filter</button>
             <a class="btn btn-secondary" href="manage.php">Clear</a>
         </form>
     </div>
@@ -115,10 +115,10 @@ $lateRate = late_interest_daily_fraction();
                     <td class="num"><?= money((float)$rental['total_paid']); ?><span class="cell-sub"><?= (int)$rental['payment_count']; ?> payment(s)</span><span class="cell-sub">Last: <?= h($lastPayment); ?></span></td>
                     <td class="num"><?php if((float)$bill['remaining'] > 0): ?><strong class="text-danger"><?= money((float)$bill['remaining']); ?></strong><?php else: ?><span class="muted"><?= money((float)$bill['remaining']); ?></span><?php endif; ?><span class="cell-sub"><?= cr_status_badge($bill['status'] === 'Paid' ? 'Paid' : 'Debt', $bill['status']); ?></span></td>
                     <td class="actions-cell">
-                        <a href="history.php?rental_id=<?= $rid; ?>" class="btn btn-sm btn-secondary"><?= cr_icon('clock', 'icon-sm'); ?> History</a>
+                        <a href="history.php?rental_id=<?= $rid; ?>" class="btn btn-sm btn-secondary">History</a>
                         <?php if((float)$bill['remaining']>0): ?>
                         <details class="row-form">
-                            <summary class="btn btn-sm"><?= cr_icon('plus', 'icon-sm'); ?> Add payment</summary>
+                            <summary class="btn btn-sm">Add payment</summary>
                             <form action="manage.php" method="POST" class="row-form-body">
                                 <input type="hidden" name="rental_id" value="<?= $rid; ?>">
                                 <input type="hidden" name="q" value="<?= h($q); ?>">
@@ -130,7 +130,7 @@ $lateRate = late_interest_daily_fraction();
                                 <select id="payment_method_<?= $rid; ?>" name="payment_method"><?php foreach ($methods as $m): ?><option value="<?= h($m); ?>"><?= h($m); ?></option><?php endforeach; ?></select>
                                 <label for="payment_note_<?= $rid; ?>">Note <span class="opt">(optional)</span></label>
                                 <input type="text" id="payment_note_<?= $rid; ?>" name="payment_note" maxlength="255" placeholder="Receipt no. or note">
-                                <button type="submit" name="add_payment" class="btn btn-sm"><?= cr_icon('check', 'icon-sm'); ?> Add payment</button>
+                                <button type="submit" name="add_payment" class="btn btn-sm">Add payment</button>
                             </form>
                         </details>
                         <?php else: ?>

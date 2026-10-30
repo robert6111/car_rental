@@ -64,7 +64,7 @@ $list=$conn->query("SELECT e.*,ca.reg_no FROM expenses e LEFT JOIN cars ca ON e.
         </div>
     </div>
     <div class="form-actions">
-        <button type="submit"><?= cr_icon('check'); ?> Save expense</button>
+        <button type="submit">Save expense</button>
     </div>
 </form>
 

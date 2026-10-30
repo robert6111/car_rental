@@ -45,19 +45,19 @@ cr_layout_start('Analytics');
             <label for="to_date">To</label>
             <input type="date" id="to_date" name="to_date" value="<?= h($to); ?>">
         </div>
-        <button type="submit"><?= cr_icon('search'); ?> Apply</button>
+        <button type="submit">Apply</button>
         <a class="btn btn-secondary" href="analytics.php">Clear</a>
     </form>
     <p class="hint mb-0">Rentals overlapping <?= h(cr_date($from)); ?> to <?= h(cr_date($to)); ?> (canceled excluded). Payments, interest and expenses are counted by their own date.</p>
 </div>
 
 <div class="stats">
-    <div class="stat"><div class="stat-icon"><?= cr_icon('calendar'); ?></div><div><div class="stat-label">Rentals</div><div class="stat-value"><?= h($summary['rentals']); ?></div></div></div>
-    <div class="stat"><div class="stat-icon"><?= cr_icon('chart'); ?></div><div><div class="stat-label">Rental revenue</div><div class="stat-value"><?= money((float)$summary['revenue']); ?></div></div></div>
-    <div class="stat tone-warning"><div class="stat-icon"><?= cr_icon('clock'); ?></div><div><div class="stat-label">Late interest charged</div><div class="stat-value"><?= money((float)$interest['charged']); ?></div></div></div>
-    <div class="stat tone-success"><div class="stat-icon"><?= cr_icon('wallet'); ?></div><div><div class="stat-label">Payments collected</div><div class="stat-value"><?= money((float)$payments['paid']); ?></div></div></div>
-    <div class="stat tone-danger"><div class="stat-icon"><?= cr_icon('receipt'); ?></div><div><div class="stat-label">Expenses</div><div class="stat-value"><?= money((float)$expenses['total_expense']); ?></div></div></div>
-    <div class="stat tone-purple"><div class="stat-icon"><?= cr_icon('tag'); ?></div><div><div class="stat-label">Estimated profit (payments − expenses)</div><div class="stat-value"><?= money($profit); ?></div></div></div>
+    <div class="stat"><div><div class="stat-label">Rentals</div><div class="stat-value"><?= h($summary['rentals']); ?></div></div></div>
+    <div class="stat"><div><div class="stat-label">Rental revenue</div><div class="stat-value"><?= money((float)$summary['revenue']); ?></div></div></div>
+    <div class="stat tone-warning"><div><div class="stat-label">Late interest charged</div><div class="stat-value"><?= money((float)$interest['charged']); ?></div></div></div>
+    <div class="stat tone-success"><div><div class="stat-label">Payments collected</div><div class="stat-value"><?= money((float)$payments['paid']); ?></div></div></div>
+    <div class="stat tone-danger"><div><div class="stat-label">Expenses</div><div class="stat-value"><?= money((float)$expenses['total_expense']); ?></div></div></div>
+    <div class="stat tone-purple"><div><div class="stat-label">Estimated profit (payments − expenses)</div><div class="stat-value"><?= money($profit); ?></div></div></div>
 </div>
 
 <div class="card card-flush">

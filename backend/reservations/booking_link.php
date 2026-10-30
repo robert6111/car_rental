@@ -69,7 +69,7 @@ $prefillName = trim((string) ($_POST['customer_name'] ?? ''));
 $prefillPhone = trim((string) ($_POST['phone'] ?? ''));
 ?>
 <?php cr_layout_start('Send booking link'); ?>
-<a class="back-link" href="manage.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All reservations</a>
+<a class="back-link" href="manage.php">All reservations</a>
 <?= cr_page_header('Send booking link', 'Send customers the online booking page on WhatsApp so they can request a car.'); ?>
 <?php if (!cr_setting_bool('public_booking_enabled')): ?>
     <?= cr_alert('warning', 'Online booking is switched off, so customers who open this link will see a "closed" message.' . (stock_has_permission('settings_manage') ? ' <a href="../settings/index.php">Turn it on in Settings</a>.' : ''), true); ?>
@@ -109,10 +109,10 @@ $prefillPhone = trim((string) ($_POST['phone'] ?? ''));
             </div>
         </div>
         <div class="form-actions">
-            <button class="btn btn-success" type="submit"><?= cr_icon('whatsapp'); ?> Open WhatsApp and send link</button>
-            <button class="btn btn-secondary" id="copyBookingLink" type="button"><?= cr_icon('link'); ?> Copy booking link</button>
-            <a class="btn btn-secondary" target="_blank" rel="noopener" href="<?= h($link); ?>"><?= cr_icon('external'); ?> Open booking page</a>
-            <a class="btn btn-ghost" href="booking_link.php"><?= cr_icon('refresh'); ?> Refresh detected link</a>
+            <button class="btn btn-success" type="submit">Open WhatsApp and send link</button>
+            <button class="btn btn-secondary" id="copyBookingLink" type="button">Copy booking link</button>
+            <a class="btn btn-secondary" target="_blank" rel="noopener" href="<?= h($link); ?>">Open booking page</a>
+            <a class="btn btn-ghost" href="booking_link.php">Refresh detected link</a>
         </div>
     </form>
 </div>
@@ -125,8 +125,8 @@ $prefillPhone = trim((string) ($_POST['phone'] ?? ''));
         <input id="bookingLink" type="text" value="<?= h($link); ?>" readonly onclick="this.select()">
     </div>
     <div class="row-flex mt-4">
-        <a class="btn btn-success" target="_blank" rel="noopener" href="https://wa.me/?text=<?= h(rawurlencode($defaultMessage)); ?>"><?= cr_icon('whatsapp'); ?> Share on WhatsApp without a number</a>
-        <a class="btn btn-secondary" target="_blank" rel="noopener" href="<?= h($link); ?>"><?= cr_icon('external'); ?> Open booking page</a>
+        <a class="btn btn-success" target="_blank" rel="noopener" href="https://wa.me/?text=<?= h(rawurlencode($defaultMessage)); ?>">Share on WhatsApp without a number</a>
+        <a class="btn btn-secondary" target="_blank" rel="noopener" href="<?= h($link); ?>">Open booking page</a>
     </div>
 </div>
 <script>

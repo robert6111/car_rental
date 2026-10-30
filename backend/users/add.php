@@ -43,7 +43,7 @@ $keepRole = (int)($keep['role_id'] ?? 0);
 $keepActive = $keep ? isset($keep['is_active']) : true;
 ?>
 <?php cr_layout_start('Add user'); ?>
-<a class="back-link" href="manage.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All users</a>
+<a class="back-link" href="manage.php">All users</a>
 <?= cr_page_header('Add user', 'Give a staff member their own sign-in.'); ?>
 <?= cr_alerts($msg, $error); ?>
 
@@ -61,7 +61,7 @@ $keepActive = $keep ? isset($keep['is_active']) : true;
             <label for="password">Password <span class="req">*</span></label>
             <div class="password-wrap">
                 <input type="password" id="password" name="password" minlength="10" maxlength="72" autocomplete="new-password" required>
-                <button type="button" class="password-toggle" data-password-toggle="password" aria-label="Show password"><?= cr_icon('eye'); ?></button>
+                <button type="button" class="password-toggle" data-password-toggle="password" aria-pressed="false">Show</button>
             </div>
             <span class="hint">At least 10 characters.</span>
         </div>
@@ -74,7 +74,7 @@ $keepActive = $keep ? isset($keep['is_active']) : true;
         </div>
     </div>
     <div class="form-actions">
-        <button type="submit"><?= cr_icon('user-plus'); ?> Add user</button>
+        <button type="submit">Add user</button>
         <a class="btn btn-secondary" href="manage.php">Cancel</a>
     </div>
 </form>

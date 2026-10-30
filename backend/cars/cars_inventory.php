@@ -91,7 +91,7 @@ if (!$result) {
 ?>
 
 <?php cr_layout_start('Car inventory'); ?>
-<?= cr_page_header('Car inventory', 'See which cars are free and move cars in and out of maintenance.', $canManage ? '<a class="btn" href="add.php">' . cr_icon('plus') . ' Add car</a>' : ''); ?>
+<?= cr_page_header('Car inventory', 'See which cars are free and move cars in and out of maintenance.', $canManage ? '<a class="btn" href="add.php">Add car</a>' : ''); ?>
 <?= cr_alerts($msg, $error); ?>
 
 <div class="card">
@@ -129,15 +129,15 @@ if (!$result) {
                         <td class="num"><?= money($row['price_per_day']) ?></td>
                         <?php if ($canManage): ?>
                         <td class="actions-cell">
-                            <a href="edit.php?id=<?= (int)$row['id'] ?>" class="btn btn-sm btn-secondary"><?= cr_icon('edit', 'icon-sm') ?> Edit</a>
+                            <a href="edit.php?id=<?= (int)$row['id'] ?>" class="btn btn-sm btn-secondary">Edit</a>
                             <?php if ($status === 'Maintenance'): ?>
                                 <a href="<?= h(stock_action_url('cars_inventory.php?action=available&car_id=' . (int)$row['id'])); ?>"
                                    data-confirm="Take this car out of maintenance?"
-                                   class="btn btn-sm btn-success"><?= cr_icon('check', 'icon-sm') ?> Make available</a>
+                                   class="btn btn-sm btn-success">Make available</a>
                             <?php elseif (!in_array($status, ['Rented', 'Not Returned'], true)): ?>
                                 <a href="<?= h(stock_action_url('cars_inventory.php?action=maintenance&car_id=' . (int)$row['id'])); ?>"
                                    data-confirm="Move this car to maintenance? It cannot be rented until it is made available again."
-                                   class="btn btn-sm btn-warning"><?= cr_icon('wrench', 'icon-sm') ?> Move to maintenance</a>
+                                   class="btn btn-sm btn-warning">Move to maintenance</a>
                             <?php endif; ?>
                         </td>
                         <?php endif; ?>

@@ -76,7 +76,7 @@ $rows = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
 $pdfUrl = 'export_pdf.php?status=' . urlencode($status_filter) . '&from_date=' . urlencode($from_date) . '&to_date=' . urlencode($to_date) . '&reg_no=' . urlencode($reg_no);
 cr_layout_start('Rental report');
 ?>
-<?= cr_page_header('Rental report', 'Rentals by status and period, with their total value.', '<a class="btn btn-secondary" href="' . h($pdfUrl) . '" target="_blank">' . cr_icon('download') . ' Download PDF</a>'); ?>
+<?= cr_page_header('Rental report', 'Rentals by status and period, with their total value.', '<a class="btn btn-secondary" href="' . h($pdfUrl) . '" target="_blank">Download PDF</a>'); ?>
 
 <div class="card">
     <form method="GET" class="filters mb-0">
@@ -96,16 +96,16 @@ cr_layout_start('Rental report');
             <label for="reg_no">Reg no or customer</label>
             <input type="text" id="reg_no" name="reg_no" value="<?= h($reg_no); ?>" placeholder="Example: 34 ABC 123">
         </div>
-        <button type="submit"><?= cr_icon('search'); ?> Filter</button>
+        <button type="submit">Filter</button>
         <a class="btn btn-secondary" href="report.php">Clear</a>
     </form>
     <p class="hint mb-0">Rentals that overlap the chosen period are included. The total excludes canceled rentals.</p>
 </div>
 
 <div class="stats">
-    <div class="stat"><div class="stat-icon"><?= cr_icon('calendar'); ?></div><div><div class="stat-label">Rentals found</div><div class="stat-value"><?= (int)$pg['total']; ?></div></div></div>
-    <div class="stat tone-neutral"><div class="stat-icon"><?= cr_icon('list'); ?></div><div><div class="stat-label">Counted in total</div><div class="stat-value"><?= (int)$counted; ?></div></div></div>
-    <div class="stat tone-success"><div class="stat-icon"><?= cr_icon('wallet'); ?></div><div><div class="stat-label">Total value</div><div class="stat-value"><?= money($total); ?></div></div></div>
+    <div class="stat"><div><div class="stat-label">Rentals found</div><div class="stat-value"><?= (int)$pg['total']; ?></div></div></div>
+    <div class="stat tone-neutral"><div><div class="stat-label">Counted in total</div><div class="stat-value"><?= (int)$counted; ?></div></div></div>
+    <div class="stat tone-success"><div><div class="stat-label">Total value</div><div class="stat-value"><?= money($total); ?></div></div></div>
 </div>
 
 <div class="card card-flush">

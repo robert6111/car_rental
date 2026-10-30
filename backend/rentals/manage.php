@@ -117,7 +117,7 @@ if ($stmt) {
 $today = cr_today();
 ?>
 <?php cr_layout_start('All rentals'); ?>
-<?= cr_page_header('All rentals', 'Every rental with its payments and return status.', '<a class="btn" href="add.php">' . cr_icon('plus') . ' New rental</a>'); ?>
+<?= cr_page_header('All rentals', 'Every rental with its payments and return status.', '<a class="btn" href="add.php">New rental</a>'); ?>
 <?= cr_alerts($msg, $error); ?>
 
 <div class="card card-flush">
@@ -134,7 +134,7 @@ $today = cr_today();
                     <?php foreach($all_statuses as $s): ?><option value="<?= h($s) ?>" <?= $status_filter===$s?'selected':'' ?>><?= h($s) ?></option><?php endforeach; ?>
                 </select>
             </div>
-            <button type="submit"><?= cr_icon('search'); ?> Filter</button>
+            <button type="submit">Filter</button>
             <a class="btn btn-secondary" href="manage.php">Clear</a>
         </form>
     </div>
@@ -185,14 +185,14 @@ $today = cr_today();
                         <?php endif; ?>
                     </td>
                     <td class="actions-cell">
-                        <a href="edit.php?id=<?= h($row['id']) ?>" class="btn btn-sm btn-secondary"><?= cr_icon('edit', 'icon-sm') ?> Edit</a>
-                        <a href="contract.php?id=<?= h($row['id']) ?>" class="btn btn-sm btn-secondary" target="_blank" title="Print contract" aria-label="Print contract for rental #<?= (int)$row['id'] ?>"><?= cr_icon('printer', 'icon-sm') ?></a>
-                        <?php if($status !== 'Deleted'): ?><a href="<?= h(stock_action_url('manage.php?action=del&rental_id=' . (int)$row['id'])); ?>" data-confirm="Mark this rental as deleted?" class="btn btn-sm btn-danger" title="Delete rental" aria-label="Delete rental #<?= (int)$row['id'] ?>"><?= cr_icon('trash', 'icon-sm') ?></a><?php endif; ?>
+                        <a href="edit.php?id=<?= h($row['id']) ?>" class="btn btn-sm btn-secondary">Edit</a>
+                        <a href="contract.php?id=<?= h($row['id']) ?>" class="btn btn-sm btn-secondary" target="_blank" aria-label="Print contract for rental #<?= (int)$row['id'] ?>">Contract</a>
+                        <?php if($status !== 'Deleted'): ?><a href="<?= h(stock_action_url('manage.php?action=del&rental_id=' . (int)$row['id'])); ?>" data-confirm="Mark this rental as deleted?" class="btn btn-sm btn-danger" aria-label="Delete rental #<?= (int)$row['id'] ?>">Delete</a><?php endif; ?>
                         <?php if($isOut): ?>
                         <div class="row-actions">
-                            <?php if($isOverdueOut): ?><a href="<?= h(stock_action_url('not_returned.php?create=' . (int)$row['id'])); ?>" class="btn btn-sm btn-danger" title="Open a not-returned case"><?= cr_icon('alert', 'icon-sm') ?> Open case</a><?php endif; ?>
+                            <?php if($isOverdueOut): ?><a href="<?= h(stock_action_url('not_returned.php?create=' . (int)$row['id'])); ?>" class="btn btn-sm btn-danger" title="Open a not-returned case">Open case</a><?php endif; ?>
                         <details class="row-form">
-                            <summary class="btn btn-sm btn-success"><?= cr_icon('check', 'icon-sm') ?> Confirm return</summary>
+                            <summary class="btn btn-sm btn-success">Confirm return</summary>
                             <form method="POST" action="manage.php" class="row-form-body">
                                 <input type="hidden" name="rental_id" value="<?= (int)$row['id'] ?>">
                                 <label for="return_mileage_<?= (int)$row['id'] ?>">Return mileage <span class="opt">(optional)</span></label>

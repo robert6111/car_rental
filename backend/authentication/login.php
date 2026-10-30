@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
         <label for="password">Password</label>
         <div class="password-wrap">
             <input type="password" name="password" id="password" autocomplete="current-password" required>
-            <button type="button" class="password-toggle" data-password-toggle="password" aria-label="Show password"><?= cr_icon('eye'); ?></button>
+            <button type="button" class="password-toggle" data-password-toggle="password" aria-pressed="false">Show</button>
         </div>
     </div>
     <div class="form-actions mt-3">

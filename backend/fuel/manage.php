@@ -79,7 +79,7 @@ $list=$conn->query("SELECT f.*, ca.reg_no, m.name AS make_name, mo.name AS model
         </div>
     </div>
     <div class="form-actions">
-        <button type="submit"><?= cr_icon('check'); ?> Save fuel log</button>
+        <button type="submit">Save fuel log</button>
     </div>
 </form>
 

@@ -88,7 +88,7 @@ $pageQs=($pg['page']>1?'&page='.(int)$pg['page']:'').(isset($_GET['per_page'])?'
         </div>
     </div>
     <div class="form-actions">
-        <button type="submit"><?= cr_icon('check'); ?> Assign task</button>
+        <button type="submit">Assign task</button>
     </div>
 </form>
 
@@ -109,7 +109,7 @@ $pageQs=($pg['page']>1?'&page='.(int)$pg['page']:'').(isset($_GET['per_page'])?'
                     <td><?php if (!empty($t['reg_no'])): ?><span class="plate"><?= h($t['reg_no']) ?></span><?php endif; ?></td>
                     <td class="nowrap"><?= h(cr_date($t['due_date'])) ?></td>
                     <td><?= cr_status_badge((string)$t['status']) ?></td>
-                    <td class="actions-cell"><?php if ($t['status'] !== 'Completed'): ?><a class="btn btn-sm btn-success" href="<?= h(stock_action_url('?complete=' . (int)$t['id'] . $pageQs)) ?>"><?= cr_icon('check', 'icon-sm'); ?> Complete</a><?php endif; ?></td>
+                    <td class="actions-cell"><?php if ($t['status'] !== 'Completed'): ?><a class="btn btn-sm btn-success" href="<?= h(stock_action_url('?complete=' . (int)$t['id'] . $pageQs)) ?>">Complete</a><?php endif; ?></td>
                 </tr>
             <?php endwhile; else: ?>
                 <tr><td colspan="8" class="table-empty">No tasks yet.</td></tr>

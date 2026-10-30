@@ -7,7 +7,7 @@ $sql = "SELECT u.id, u.username, u.email, u.is_active, r.name AS role_name FROM 
 $result = $conn->query($sql);
 ?>
 <?php cr_layout_start('Users'); ?>
-<?= cr_page_header('Users', 'Everyone who can sign in to the back office.', '<a class="btn" href="add.php">' . cr_icon('user-plus') . ' Add user</a>'); ?>
+<?= cr_page_header('Users', 'Everyone who can sign in to the back office.', '<a class="btn" href="add.php">Add user</a>'); ?>
 <?php if (($_GET['error'] ?? '') === 'last_admin'): ?><?= cr_alert('error', 'The last active admin cannot be deleted.'); ?><?php endif; ?>
 
 <div class="card card-flush">
@@ -24,9 +24,9 @@ $result = $conn->query($sql);
                     <td><span class="badge <?= strcasecmp((string)$row['role_name'], 'Admin') === 0 ? 'badge-purple' : 'badge-info'; ?>"><?= h($row['role_name']); ?></span></td>
                     <td><?= $row['is_active'] ? cr_status_badge('Active') : cr_status_badge('Inactive'); ?></td>
                     <td class="actions-cell">
-                        <a href="edit.php?id=<?= h($row['id']); ?>" class="btn btn-sm btn-secondary"><?= cr_icon('edit', 'icon-sm'); ?> Edit</a>
+                        <a href="edit.php?id=<?= h($row['id']); ?>" class="btn btn-sm btn-secondary">Edit</a>
                         <?php if ((int)$row['id'] !== (int)$_SESSION['user_id']): ?>
-                        <a href="<?= h(stock_action_url('delete.php?id=' . (int)$row['id'])); ?>" data-confirm="Delete this user?" class="btn btn-sm btn-danger"><?= cr_icon('trash', 'icon-sm'); ?> Delete</a>
+                        <a href="<?= h(stock_action_url('delete.php?id=' . (int)$row['id'])); ?>" data-confirm="Delete this user?" class="btn btn-sm btn-danger">Delete</a>
                         <?php endif; ?>
                     </td>
                 </tr>

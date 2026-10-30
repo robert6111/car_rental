@@ -27,7 +27,7 @@ $v = function (string $field) use ($form): string {
 };
 ?>
 <?php cr_layout_start('Add customer'); ?>
-<a class="back-link" href="customer.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All customers</a>
+<a class="back-link" href="customer.php">All customers</a>
 <?= cr_page_header('Add customer', 'Register a customer before creating a rental for them.'); ?>
 <?= cr_alerts($msg, $error); ?>
 
@@ -79,7 +79,7 @@ $v = function (string $field) use ($form): string {
     </div>
 
     <div class="form-actions">
-        <button type="submit"><?= cr_icon('check'); ?> Save customer</button>
+        <button type="submit">Save customer</button>
         <a class="btn btn-secondary" href="customer.php">Cancel</a>
     </div>
 </form>

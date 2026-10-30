@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <?php cr_layout_start('Edit user'); ?>
-<a class="back-link" href="manage.php"><?= cr_icon('arrow-left', 'icon-sm'); ?> All users</a>
+<a class="back-link" href="manage.php">All users</a>
 <?= cr_page_header('Edit user', 'Change sign-in details, role or status.'); ?>
 <?= cr_alerts($msg, $error); ?>
 <?php if ($isSelf): ?><?= cr_alert('info', 'This is your own account. You cannot change your own role or switch yourself off.'); ?><?php endif; ?>
@@ -85,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <label for="password">New password <span class="opt">(optional)</span></label>
             <div class="password-wrap">
                 <input type="password" id="password" name="password" minlength="10" maxlength="72" autocomplete="new-password">
-                <button type="button" class="password-toggle" data-password-toggle="password" aria-label="Show password"><?= cr_icon('eye'); ?></button>
+                <button type="button" class="password-toggle" data-password-toggle="password" aria-pressed="false">Show</button>
             </div>
             <span class="hint">At least 10 characters. Leave empty to keep the current password.</span>
         </div>
@@ -98,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
     <div class="form-actions">
-        <button type="submit"><?= cr_icon('check'); ?> Save changes</button>
+        <button type="submit">Save changes</button>
         <a class="btn btn-secondary" href="manage.php">Cancel</a>
     </div>
 </form>
