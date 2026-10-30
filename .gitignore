@@ -1,0 +1,7 @@
+# Local configuration (contains secrets)
+config/config.php
+# Customer data - never commit
+storage/
+backend/uploads/
+backend/backup/backups/*.sql
+*.log

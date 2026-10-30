@@ -1,0 +1,8 @@
+# Allow public assets from includes but block internal PHP/config/data files.
+<FilesMatch "\.(php|inc|sql|bak|env|ini|log)$">
+    Require all denied
+</FilesMatch>
+<FilesMatch "\.(css|js|png|jpg|jpeg|gif|svg|webp|ico|woff|woff2|ttf|eot|pdf)$">
+    Require all granted
+</FilesMatch>
+Options -Indexes

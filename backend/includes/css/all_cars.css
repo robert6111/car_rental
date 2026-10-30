@@ -1,0 +1,78 @@
+
+/* Page heading */
+.content-page h2 {
+    color: #333;
+    margin-bottom: 15px;
+}
+
+/* Add New Car link */
+.content-page a[href="add.php"] {
+    display: inline-block;
+    margin-bottom: 15px;
+    padding: 8px 15px;
+    background-color: #007bff;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: 0.3s;
+}
+
+.content-page a[href="add.php"]:hover {
+    background-color: #0056b3;
+}
+
+/* Table */
+.content-page table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+}
+
+.content-page table th,
+.content-page table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.content-page table th {
+    background-color: #007bff;
+    color: #fff;
+    text-transform: uppercase;
+}
+
+/* Table rows hover */
+.content-page table tr:hover {
+    background-color: #f1f1f1;
+}
+
+/* Actions links */
+.content-page table td a {
+    text-decoration: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    color: #fff;
+    margin-right: 5px;
+    font-size: 14px;
+}
+
+.content-page table td a:first-child { background-color: #ffc107; }
+.content-page table td a:first-child:hover { background-color: #e0a800; }
+
+.content-page table td a:last-child { background-color: #dc3545; }
+.content-page table td a:last-child:hover { background-color: #c82333; }
+
+/* Status badges */
+.content-page table td.status {
+    padding: 5px 10px;
+    border-radius: 4px;
+    color: #fff;
+    text-align: center;
+    font-weight: bold;
+}
+
+.status-Available { background-color: #28a745; }
+.status-Rented { background-color: #ffc107; color: #212529; }
+.status-Maintenance { background-color: #dc3545; }
+

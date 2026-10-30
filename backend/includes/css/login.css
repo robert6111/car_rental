@@ -1,0 +1,125 @@
+/* General page styling */
+body {
+    font-family: Arial, sans-serif;
+    background: #f5f6fa;
+    margin: 0;
+    padding: 0;
+}
+
+/* Container for messages */
+.msg {
+    width: 100%;
+    margin-bottom: 20px; /* space below the message */
+    text-align: center; /* center the text */
+}
+
+/* Base style for messages */
+.alert {
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-size: 14px;
+    display: inline-block; /* shrink to content */
+    width: auto;
+}
+
+/* Error message style */
+.alert.error {
+    background-color: #f8d7da; /* light red background */
+    color: #842029; /* dark red text */
+    border: 1px solid #f5c2c7;
+}
+
+/* Success message style */
+.alert.success {
+    background-color: #d1e7dd; /* light green background */
+    color: #0f5132; /* dark green text */
+    border: 1px solid #badbcc;
+}
+
+
+
+/* Container for login/register */
+.auth-container {
+    width: 360px;
+    margin: 80px auto;
+    padding: 40px;
+    background: #ffffff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-radius: 8px;
+}
+
+/* Headings */
+.auth-container h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+/* Input fields */
+.auth-container input[type="text"],
+.auth-container input[type="email"],
+.auth-container input[type="password"] {
+    width: 100%;
+    padding: 12px 15px;
+    margin: 8px 0;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box;
+    font-size: 14px;
+}
+
+/* Buttons */
+.auth-container button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 12px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    font-size: 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.auth-container button:hover {
+    background-color: #45a049;
+}
+
+/* Alerts */
+.alert {
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.alert.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.alert.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+/* Profile links or small texts if needed */
+.auth-container a {
+    color: #4CAF50;
+    text-decoration: none;
+}
+
+.auth-container a:hover {
+    text-decoration: underline;
+}
+
+/* Responsive */
+@media screen and (max-width: 400px) {
+    .auth-container {
+        width: 90%;
+        padding: 20px;
+    }
+}

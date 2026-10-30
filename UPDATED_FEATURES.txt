@@ -1,0 +1,32 @@
+Car Rental System - Updates Added
+
+1. Rental status automation
+- Expired active rentals are automatically marked Completed and their cars are released as Available.
+- Same-date rentals are NOT force-completed automatically. They stay Active and the system shows a manual Complete button so the user can confirm the car was really returned.
+
+2. Loyalty discount
+- Customers with 3 or more completed rentals receive a 10% loyalty discount on new rentals.
+- The discount is calculated on the server and shown on the add rental page.
+
+3. Late-payment interest
+- Remaining unpaid rental balances now show late interest after the rental end date.
+- Default rate: 1% per day on the unpaid base balance.
+- Payment pages and payment history show rental cost, late interest, total due, paid amount, and remaining balance.
+
+4. Damage tracking linked to renter
+- Damage reports now require selecting the completed rental, not only the car.
+- Damage list and damage details show the renter and rental period.
+
+5. Registration-number search
+- Added registration/customer search in rentals, active rentals, payments, damages, car list, rental reports, and payment reports.
+- Car registration input now accepts international-style plate numbers.
+
+6. Import data
+- Admins can import Customers and Cars from CSV through the Import Data page.
+- Customer CSV headers: full_name, phone_number, email, license_no
+- Car CSV headers: reg_no, make, model, year, price_per_day, status
+
+7. Maintenance records
+- Added a Service Records list page for viewing/searching recorded service and maintenance history.
+
+No database structure change was required for these updates.
