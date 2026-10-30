@@ -1,50 +1,79 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
-
 require __DIR__ . '/../includes/db.php';
-
-if (!isset($_SESSION['user_id'])) {
-    header("Location: ../authentication/login.php");
-    exit;
-}
+require_once __DIR__ . '/../includes/rental_status.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Handle empty mileage_at_service input
-    $mileage_at_service = !empty($_POST['mileage_at_service']) ? $_POST['mileage_at_service'] : NULL;
+    $error = '';
+    $car_id = (int)($_POST['car_id'] ?? 0);
+    $service_type = trim((string)($_POST['service_type'] ?? ''));
+    $description = trim((string)($_POST['description'] ?? ''));
+    $service_date = trim((string)($_POST['service_date'] ?? ''));
+    $mileageInput = trim((string)($_POST['mileage_at_service'] ?? ''));
+    $nextMileageInput = trim((string)($_POST['next_service_mileage'] ?? ''));
+    $costInput = trim((string)($_POST['cost'] ?? ''));
+    $mileage_at_service = null;
+    $next_service_mileage = null;
+    $cost = null;
 
-    $sql = "INSERT INTO car_service
-    (car_id, service_type, description, service_date, mileage_at_service, next_service_mileage, cost)
-    VALUES (?, ?, ?, ?, ?, ?, ?)";
+    if ($car_id <= 0) {
+        $error = 'Please select a car.';
+    } elseif ($service_type === '' || mb_strlen($service_type) > 100) {
+        $error = 'Service type is required (max 100 characters).';
+    } elseif (!cr_valid_date($service_date)) {
+        $error = 'Please enter a valid service date.';
+    } elseif ($service_date > cr_today()) {
+        $error = 'The service date cannot be in the future.';
+    } elseif ($mileageInput !== '' && !preg_match('/^\d{1,9}$/', $mileageInput)) {
+        $error = 'Mileage at service must be a whole number of 0 or more.';
+    } elseif ($nextMileageInput !== '' && !preg_match('/^\d{1,9}$/', $nextMileageInput)) {
+        $error = 'Next service mileage must be a whole number of 0 or more.';
+    } elseif ($costInput !== '' && (($cost = cr_parse_money($costInput)) === null || $cost < 0)) {
+        $error = 'Service cost must be a valid amount of 0 or more (for example 1500 or 1.500,50).';
+    }
 
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param(
-        "issssid",
-        $_POST['car_id'],
-        $_POST['service_type'],
-        $_POST['description'],
-        $_POST['service_date'],
-        $mileage_at_service,  // Use the validated mileage_at_service
-        $_POST['next_service_mileage'],
-        $_POST['cost'] // This is the raw value of cost (numeric)
-    );
+    if (!$error) {
+        if ($mileageInput !== '') $mileage_at_service = (int)$mileageInput;
+        if ($nextMileageInput !== '') $next_service_mileage = (int)$nextMileageInput;
+        if ($mileage_at_service !== null && $next_service_mileage !== null && $next_service_mileage < $mileage_at_service) {
+            $error = 'Next service mileage cannot be lower than the mileage at service.';
+        }
+    }
 
-    if ($stmt->execute()) {
-        // Set success message in session
-        $_SESSION['success'] = "Service record added successfully!";
+    if (!$error) {
+        $chk = $conn->prepare("SELECT id FROM cars WHERE id = ?");
+        $chk->bind_param("i", $car_id);
+        $chk->execute();
+        if ($chk->get_result()->num_rows === 0) $error = 'The selected car does not exist.';
+        $chk->close();
+    }
+
+    if (!$error) {
+        $sql = "INSERT INTO car_service
+        (car_id, service_type, description, service_date, mileage_at_service, next_service_mileage, cost)
+        VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("isssiid", $car_id, $service_type, $description, $service_date, $mileage_at_service, $next_service_mileage, $cost);
+
+        if ($stmt->execute()) {
+            $_SESSION['success'] = "Service record added successfully!";
+        } else {
+            $_SESSION['error'] = cr_db_error($stmt->error, 'The service record could not be saved.');
+        }
+        $stmt->close();
     } else {
-        // Set error message in session
-        error_log('Service insert failed: ' . $stmt->error); $_SESSION['error'] = "The service record could not be saved.";
+        $_SESSION['error'] = $error;
     }
 
     // Redirect to the same page to prevent form resubmission on refresh
-    header("Location: service.php"); 
-    exit; // Stop further script execution after redirect
+    header("Location: service.php");
+    exit;
 }
 
 
-// Fetch all cars for dropdown (no change to existing code)
+// Fetch all cars for dropdown
 $allCars = $conn->query("
-    SELECT 
+    SELECT
         cars.id AS car_id,
         cars.reg_no,
         models.name AS model_name,
@@ -56,17 +85,12 @@ $allCars = $conn->query("
 ");
 
 ?>
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>car services</title>
-
-    <link rel="stylesheet" href="/../backend/includes/css/dashboard.css">
-    <link rel="stylesheet" href="/../backend/includes/css/common.css">
-    <link rel="stylesheet" href="/../backend/includes/css/header.css">
-    <link rel="stylesheet" href="/../backend/includes/css/all_cars.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Services</title>
 </head>
 <body>
 <?php
@@ -92,7 +116,6 @@ if (isset($_SESSION['error'])) {
 
 <form action="service.php" method="POST">
 
-    <!-- REPLACED INPUT WITH DROPDOWN WITHOUT TOUCHING ANY OTHER CODE -->
     <label>Select Car:</label><br>
     <select name="car_id" required>
         <option value="">-- Select Car --</option>
@@ -107,80 +130,26 @@ if (isset($_SESSION['error'])) {
     <br><br>
 
     <label>Service Type:</label><br>
-    <input type="text" name="service_type" placeholder="Oil change, Tire replacement, etc" required><br><br>
+    <input type="text" name="service_type" maxlength="100" placeholder="Oil change, Tire replacement, etc" required><br><br>
 
     <label>Description:</label><br>
     <textarea name="description" rows="4" cols="40"></textarea><br><br>
 
     <label>Service Date:</label><br>
-    <input type="date" name="service_date" required><br><br>
+    <input type="date" name="service_date" max="<?= h(cr_today()) ?>" required><br><br>
 
-    
+
     <label>Mileage at Service:</label><br>
-    <input type="number" name="mileage_at_service"><br><br>
+    <input type="number" id="mileage_at_service" name="mileage_at_service" min="0" step="1"><br><br>
 
     <label>Next Service Mileage:</label><br>
-    <input type="number" name="next_service_mileage"><br><br>
-   
-<script>
-function formatMileage(inputId) {
-    let input = document.getElementById(inputId);
-    input.addEventListener("input", function() {
-        let value = this.value.replace(/[^\d,]/g, ""); // Allow only digits and commas
-        let parts = value.split(",");
-        if (parts.length > 1) {
-            parts[1] = parts[1].substring(0, 3); // Limit decimal places to 2
-        }
-        value = parts.join(","); // Join integer and decimal parts
-        
-        // Format as Turkish currency style
-        if (value) {
-            let splitValue = value.split(",");
-            let integerPart = splitValue[0];
-            let decimalPart = splitValue[1] ? "," + splitValue[1] : "";
-            let formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-            this.value = formattedInteger + decimalPart;
-        }
-    });
-}
-
-formatMileage("mileage_at_service");
-formatMileage("next_service_mileage");
-</script>
+    <input type="number" id="next_service_mileage" name="next_service_mileage" min="0" step="1"><br><br>
 
    <label>Service Cost:</label><br>
-<input type="text" id="cost" name="cost"><br>
+<input type="text" id="cost" name="cost" inputmode="decimal" placeholder="e.g. 1500 or 1.500,50"><br>
+<small>The amount is checked on the server; both 1,500.50 and 1.500,50 are accepted.</small>
 
-<script>
-document.getElementById("cost").addEventListener("input", function() {
-    let value = this.value.replace(/[^\d,]/g, ""); // Only allow digits and commas
-    let parts = value.split(",");
-    if (parts.length > 1) {
-        parts[1] = parts[1].substring(0, 2); // Limit decimal places to 2
-    }
-    value = parts.join(",");
-    
-    // Format as Turkish currency style
-    if (value) {
-        let splitValue = value.split(",");
-        let integerPart = splitValue[0];
-        let decimalPart = splitValue[1] ? "," + splitValue[1] : "";
-        let formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-        this.value = formattedInteger + decimalPart;
-    }
-});
-
-// Before form submission, clean the value to remove commas and send only the numeric part
-document.querySelector('form').addEventListener('submit', function(event) {
-    let costInput = document.getElementById("cost");
-    let rawValue = costInput.value.replace(/[^\d,]/g, ""); // Remove commas
-    rawValue = rawValue.replace(/\./g, ""); // Remove periods for numeric conversion
-
-    costInput.value = rawValue; // Set the cleaned numeric value back to the input
-});
-</script>
-
- <br>
+ <br><br>
 
     <input type="submit" value="Save Service Record">
 

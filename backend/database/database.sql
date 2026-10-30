@@ -361,3 +361,27 @@ CREATE TABLE settings (
   setting_value TEXT NULL,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Car returns and recorded late-payment interest
+ALTER TABLE rentals ADD COLUMN returned_at DATETIME NULL AFTER completed_at;
+ALTER TABLE rentals ADD COLUMN return_mileage INT NULL AFTER returned_by;
+ALTER TABLE rentals ADD COLUMN return_notes TEXT NULL AFTER return_mileage;
+ALTER TABLE rentals ADD INDEX idx_rental_status (status);
+ALTER TABLE rentals ADD INDEX idx_rental_car_dates (cars_id, start_date, end_date);
+ALTER TABLE reservations ADD INDEX idx_res_status_car (status, car_id);
+ALTER TABLE payment ADD INDEX idx_payment_date (payment_date);
+
+CREATE TABLE rental_charges (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  rental_id INT NOT NULL,
+  charge_type VARCHAR(30) NOT NULL DEFAULT 'late_interest',
+  charge_date DATE NOT NULL,
+  base_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  rate DECIMAL(8,4) NOT NULL DEFAULT 0.0000,
+  amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_charge_day (rental_id, charge_type, charge_date),
+  KEY idx_charge_rental (rental_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO settings (setting_key, setting_value) VALUES ('schema_version', '3');

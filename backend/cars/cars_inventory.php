@@ -3,43 +3,87 @@ require_once __DIR__ . '/../includes/auth.php';
 require __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/rental_status.php';
 sync_rental_and_car_status($conn);
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header("Location: ../authentication/login.php");
-    exit;
-}
 
 $msg = $error = "";
+$canManage = stock_has_permission('cars_manage');
 
-// Handle soft deletion (mark car as unavailable)
-if (isset($_GET['action'], $_GET['car_id']) && $_GET['action'] === 'del') {
+// Status actions: move a car to Maintenance, or make a Maintenance car available again.
+if (isset($_GET['action'], $_GET['car_id']) && in_array($_GET['action'], ['maintenance', 'available'], true)) {
     stock_require_permission('cars_manage');
     stock_validate_action_token();
     $car_id = intval($_GET['car_id']);
-    $stmt = $conn->prepare("UPDATE cars SET availability_status = 'Maintenance' WHERE id = ?");
+    $action = $_GET['action'];
+
+    $stmt = $conn->prepare("SELECT availability_status FROM cars WHERE id = ?");
     $stmt->bind_param("i", $car_id);
-    if ($stmt->execute()) {
-        $msg = "Car marked as maintenance/unavailable.";
-    } else {
-        $error = cr_db_error($stmt->error);
-    }
+    $stmt->execute();
+    $carRow = $stmt->get_result()->fetch_assoc();
     $stmt->close();
+
+    $result = 'not_found';
+    if ($carRow) {
+        $current = (string)$carRow['availability_status'];
+        if ($action === 'maintenance') {
+            if (in_array($current, ['Rented', 'Not Returned'], true)) {
+                $result = 'busy';
+            } elseif ($current === 'Maintenance') {
+                $result = 'already';
+            } else {
+                $stmt = $conn->prepare("UPDATE cars SET availability_status = 'Maintenance' WHERE id = ?");
+                $stmt->bind_param("i", $car_id);
+                $result = $stmt->execute() ? 'maintenance_ok' : 'failed';
+                if ($result === 'failed') cr_db_error($stmt->error);
+                $stmt->close();
+            }
+        } else {
+            if ($current !== 'Maintenance') {
+                $result = 'not_maintenance';
+            } else {
+                $stmt = $conn->prepare("UPDATE cars SET availability_status = 'Available' WHERE id = ? AND availability_status = 'Maintenance'");
+                $stmt->bind_param("i", $car_id);
+                $result = $stmt->execute() ? 'available_ok' : 'failed';
+                if ($result === 'failed') cr_db_error($stmt->error);
+                $stmt->close();
+                if ($result === 'available_ok') {
+                    // The car may have bookings: recalculate Rented / Reserved / Not Returned.
+                    cr_sync_car_statuses($conn, $car_id);
+                }
+            }
+        }
+    }
+    header('Location: cars_inventory.php?result=' . urlencode($result));
+    exit;
+}
+
+$resultMessages = [
+    'maintenance_ok'  => ['msg', 'Car moved to maintenance. It cannot be rented until it is made available again.'],
+    'available_ok'    => ['msg', 'Car is out of maintenance. Its status now follows its rentals and reservations.'],
+    'busy'            => ['error', 'This car is currently rented or has not been returned, so it cannot be moved to maintenance. Confirm the return first.'],
+    'already'         => ['error', 'This car is already in maintenance.'],
+    'not_maintenance' => ['error', 'Only cars in maintenance can be made available here.'],
+    'not_found'       => ['error', 'Car not found.'],
+    'failed'          => ['error', 'The car status could not be changed. Please try again.'],
+];
+$resultCode = (string)($_GET['result'] ?? '');
+if (isset($resultMessages[$resultCode])) {
+    if ($resultMessages[$resultCode][0] === 'msg') $msg = $resultMessages[$resultCode][1];
+    else $error = $resultMessages[$resultCode][1];
 }
 
 $sql = "SELECT c.id, c.reg_no, c.availability_status,
                m.name AS make, mo.name AS model, y.year AS car_year,
-               c.price_per_day  -- Add price_per_day column
+               c.price_per_day
         FROM cars c
         LEFT JOIN makes m ON c.make_id = m.id
         LEFT JOIN models mo ON c.model_id = mo.id
         LEFT JOIN car_years y ON c.year_id = y.id
         ORDER BY c.id DESC";
 
-
-
 $result = $conn->query($sql);
 if (!$result) {
-    { error_log('Query failed: ' . $conn->error); http_response_code(500); exit('Something went wrong. Please try again.'); }
+    error_log('Query failed: ' . $conn->error);
+    http_response_code(500);
+    exit('Something went wrong. Please try again.');
 }
 ?>
 
@@ -47,12 +91,11 @@ if (!$result) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cars Inventory</title>
-    <link rel="stylesheet" href="/../backend/includes/css/dashboard.css">
-    <link rel="stylesheet" href="/../backend/includes/css/common.css">
-    <link rel="stylesheet" href="/../backend/includes/css/header.css">
-    <link rel="stylesheet" href="/../backend/includes/css/all_cars.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .status-badge-NotReturned { color: #fff; background: #7f1d1d; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+    </style>
 </head>
 <body>
 <?php
@@ -63,14 +106,16 @@ include __DIR__ . '/../includes/leftsidebar.php';
     <h2>Cars Inventory</h2>
 
     <?php if ($msg): ?>
-        <div style="color:green;"><?= htmlentities($msg) ?></div>
+        <div style="color:green;"><?= h($msg) ?></div>
     <?php elseif ($error): ?>
-        <div style="color:red;"><?= htmlentities($error) ?></div>
+        <div style="color:red;"><?= h($error) ?></div>
     <?php endif; ?>
 
+    <?php if ($canManage): ?>
     <div style="margin-bottom:20px;">
         <a href="add.php" class="btn btn-primary">Add New Car</a>
     </div>
+    <?php endif; ?>
 <table border="1" cellpadding="10">
     <tr>
         <th>#</th>
@@ -79,31 +124,46 @@ include __DIR__ . '/../includes/leftsidebar.php';
         <th>Model</th>
         <th>Year</th>
         <th>Status</th>
-        <th>Price per Day</th>  <!-- New column for price per day -->
-        <th>Actions</th>
+        <th>Price per Day</th>
+        <?php if ($canManage): ?><th>Actions</th><?php endif; ?>
     </tr>
     <?php if ($result->num_rows > 0): ?>
         <?php $count = 1; ?>
         <?php while ($row = $result->fetch_assoc()): ?>
+            <?php $status = (string)$row['availability_status']; ?>
             <tr>
                 <td><?= $count++ ?></td>
-                <td><?= htmlentities($row['reg_no']) ?></td>
-                <td><?= htmlentities($row['make']) ?></td>
-                <td><?= htmlentities($row['model']) ?></td>
-                <td><?= htmlentities($row['car_year']) ?></td>
-                <td><?= htmlentities($row['availability_status']) ?></td>
-                <td><?= money($row['price_per_day']) ?></td> <!-- Display price per day -->
+                <td><?= h($row['reg_no']) ?></td>
+                <td><?= h($row['make']) ?></td>
+                <td><?= h($row['model']) ?></td>
+                <td><?= h($row['car_year']) ?></td>
                 <td>
-                    <a href="edit.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-warning">Edit</a> <br><br>
-                    <a href="<?= h(stock_action_url('cars_inventory.php?action=del&car_id=' . (int)$row['id'])); ?>"
-                       onclick="return confirm('Are you sure you want to mark this car as unavailable?')"
-                       class="btn btn-sm btn-danger">Delete</a>
+                    <?php if ($status === 'Not Returned'): ?>
+                        <span class="status-badge-NotReturned" title="Rental has ended but the return has not been confirmed">Not Returned</span>
+                    <?php else: ?>
+                        <?= h($status) ?>
+                    <?php endif; ?>
                 </td>
+                <td><?= money($row['price_per_day']) ?></td>
+                <?php if ($canManage): ?>
+                <td>
+                    <a href="edit.php?id=<?= (int)$row['id'] ?>" class="btn btn-sm btn-warning">Edit</a> <br><br>
+                    <?php if ($status === 'Maintenance'): ?>
+                        <a href="<?= h(stock_action_url('cars_inventory.php?action=available&car_id=' . (int)$row['id'])); ?>"
+                           onclick="return confirm('Take this car out of maintenance?')"
+                           class="btn btn-sm btn-primary">Make available</a>
+                    <?php elseif (!in_array($status, ['Rented', 'Not Returned'], true)): ?>
+                        <a href="<?= h(stock_action_url('cars_inventory.php?action=maintenance&car_id=' . (int)$row['id'])); ?>"
+                           onclick="return confirm('Move this car to maintenance? It cannot be rented until it is made available again.')"
+                           class="btn btn-sm btn-danger">Move to maintenance</a>
+                    <?php endif; ?>
+                </td>
+                <?php endif; ?>
             </tr>
         <?php endwhile; ?>
     <?php else: ?>
         <tr>
-            <td colspan="8" style="text-align:center;">No cars found.</td>  <!-- Adjust column span to 8 -->
+            <td colspan="<?= $canManage ? 8 : 7 ?>" style="text-align:center;">No cars found.</td>
         </tr>
     <?php endif; ?>
 </table>
@@ -111,9 +171,7 @@ include __DIR__ . '/../includes/leftsidebar.php';
 </div>
 
 <?php
-// Free result and close connection
 $result->free();
-$conn->close();
 ?>
 </body>
 </html>

@@ -50,6 +50,7 @@ function cr_settings_definitions(): array {
         'app_url'          => ['default' => '', 'type' => 'url', 'max' => 255],
         'settings_reviewed' => ['default' => '0', 'type' => 'internal'],
         'schema_version'   => ['default' => '0', 'type' => 'internal'],
+        'interest_accrued_on' => ['default' => '', 'type' => 'internal'],
     ];
 }
 

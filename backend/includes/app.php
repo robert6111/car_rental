@@ -129,10 +129,13 @@ function overdue_same_day_completion_needed(?string $status, ?string $startDate,
     return $today >= $end;
 }
 
-function rental_bill_summary(float $rentalTotal, float $totalPaid, ?string $endDate): array {
+/**
+ * Balance of a rental. $lateInterest is the recorded interest from rental_charges
+ * (see cr_sql_late_interest() / cr_rental_bill() in rental_status.php).
+ */
+function rental_bill_summary(float $rentalTotal, float $totalPaid, ?string $endDate, float $lateInterest = 0.0, int $lateDays = 0): array {
     $baseRemaining = max($rentalTotal - $totalPaid, 0);
-    $lateDays = $baseRemaining > 0 ? date_days_after_today($endDate) : 0;
-    $lateInterest = round($baseRemaining * late_interest_daily_fraction() * $lateDays, 2);
+    $lateInterest = round($lateInterest, 2);
     $grandTotal = round($rentalTotal + $lateInterest, 2);
     $remaining = max(round($grandTotal - $totalPaid, 2), 0);
     return ['base_remaining'=>round($baseRemaining,2),'late_days'=>$lateDays,'late_interest'=>$lateInterest,'grand_total'=>$grandTotal,'remaining'=>$remaining,'status'=>$remaining<=0?'Paid':'In Debt'];
@@ -144,11 +147,9 @@ function normalize_plate(string $plate): string {
 
 
 
+/** Parses a typed money amount (both 1,500.50 and 1.500,50). Invalid input gives 0. */
 function money_value($value): float {
-    if ($value === null || $value === '') return 0.0;
-    $clean = str_replace([' ', ','], ['', '.'], (string)$value);
-    $clean = preg_replace('/[^0-9.\-]/', '', $clean);
-    return (float)$clean;
+    return cr_parse_money($value) ?? 0.0;
 }
 
 function rental_period_conflicts(mysqli $conn, int $carId, string $startDate, string $endDate, int $excludeRentalId = 0): bool {

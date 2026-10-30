@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/app.php';
 require __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/rental_status.php';
 
 function car_public_phone_candidates(string $phone): array {
     return cr_phone_variants($phone);
@@ -62,9 +63,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pickup_location = trim($_POST['pickup_location'] ?? '');
         $dropoff_location = trim($_POST['dropoff_location'] ?? '');
         $notes = trim($_POST['notes'] ?? '');
+        $pickup_date = is_string($pickup_date) ? trim($pickup_date) : '';
+        $dropoff_date = is_string($dropoff_date) ? trim($dropoff_date) : '';
 
-        if (!$customer_name || !$phone || !$car_id || !$pickup_date || !$dropoff_date || $dropoff_date < $pickup_date) {
+        $selectedCar = null;
+        if ($car_id > 0) {
+            $carStmt = $conn->prepare('SELECT id, availability_status FROM cars WHERE id = ?');
+            $carStmt->bind_param('i', $car_id);
+            $carStmt->execute();
+            $selectedCar = $carStmt->get_result()->fetch_assoc() ?: null;
+            $carStmt->close();
+        }
+
+        if (!$customer_name || !$phone || !$car_id || !$pickup_date || !$dropoff_date) {
             $error = 'Please fill all required fields correctly.';
+        } elseif (!$selectedCar || $selectedCar['availability_status'] === 'Maintenance') {
+            $error = 'The selected car is not available for booking. Please choose another car.';
+        } elseif (!cr_valid_date($pickup_date) || !cr_valid_date($dropoff_date)) {
+            $error = 'Please enter valid pickup and dropoff dates.';
+        } elseif ($pickup_date < cr_today()) {
+            $error = 'The pickup date cannot be in the past.';
+        } elseif ($dropoff_date < $pickup_date) {
+            $error = 'The dropoff date cannot be before the pickup date.';
+        } elseif ((new DateTime($pickup_date))->diff(new DateTime($dropoff_date))->days > 366) {
+            $error = 'A booking cannot be longer than one year.';
         } elseif ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $error = 'Please enter a valid email address or leave it blank.';
         } else {
@@ -75,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $conn->begin_transaction();
                 $customer_id = car_public_existing_customer_id($conn, $phone, $email);
-                $status = (rental_period_conflicts($conn, $car_id, $pickup_date, $dropoff_date) || reservation_period_conflicts($conn, $car_id, $pickup_date, $dropoff_date)) ? 'Waitlisted' : 'Pending';
+                $status = cr_car_unavailable_reason($conn, $car_id, $pickup_date, $dropoff_date) !== null ? 'Waitlisted' : 'Pending';
                 $source = 'Online';
                 $stmt = $conn->prepare('INSERT INTO reservations (customer_id, car_id, customer_name, phone_number, email, pickup_date, dropoff_date, pickup_location, dropoff_location, status, source, notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)');
                 $customerIdValue = $customer_id > 0 ? $customer_id : null;
@@ -91,11 +113,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header('Location: online_booking.php?submitted=1', true, 303);
                 exit;
             } catch (Throwable $e) {
-                if ($conn->errno === 0) {
-                    try { $conn->rollback(); } catch (Throwable $ignored) {}
-                } else {
-                    try { $conn->rollback(); } catch (Throwable $ignored) {}
-                }
+                error_log('Online booking failed: ' . $e->getMessage());
+                try { $conn->rollback(); } catch (Throwable $ignored) {}
                 unset($usedTokens[$postedToken]);
                 $_SESSION['car_public_booking_used_tokens'] = $usedTokens;
                 $error = 'Could not submit request. Please try again.';
@@ -104,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$cars = $conn->query("SELECT cars.id, cars.reg_no, cars.price_per_day, makes.name AS make_name, models.name AS model_name, car_years.year AS car_year FROM cars JOIN makes ON cars.make_id=makes.id JOIN models ON cars.model_id=models.id JOIN car_years ON cars.year_id=car_years.id WHERE cars.availability_status IN ('Available','Reserved') ORDER BY makes.name, models.name");
+$cars = $conn->query("SELECT cars.id, cars.reg_no, cars.price_per_day, makes.name AS make_name, models.name AS model_name, car_years.year AS car_year FROM cars JOIN makes ON cars.make_id=makes.id JOIN models ON cars.model_id=models.id JOIN car_years ON cars.year_id=car_years.id WHERE cars.availability_status <> 'Maintenance' ORDER BY makes.name, models.name");
 ?>
 <!DOCTYPE html>
 <html>

@@ -9,29 +9,35 @@ sync_rental_and_car_status($conn);
 require_once __DIR__ . '/backup/auto_backup.php';
 run_daily_auto_backup($conn);
 
+/** Runs a fixed SELECT COUNT(*) query (no user input) and returns the number. */
 function count_rows(mysqli $conn, string $sql): int {
     $result = $conn->query($sql);
-    return $result ? (int)$result->num_rows : 0;
+    if (!$result) return 0;
+    $row = $result->fetch_row();
+    return (int)($row[0] ?? 0);
 }
 
-$totalCars      = count_rows($conn, "SELECT id FROM cars");
-$availableCars  = count_rows($conn, "SELECT id FROM cars WHERE availability_status = 'Available'");
-$rentedCars     = count_rows($conn, "SELECT id FROM cars WHERE availability_status = 'Rented'");
-$totalCustomers = count_rows($conn, "SELECT id FROM customers");
-$totalRentals   = count_rows($conn, "SELECT id FROM rentals");
-$totalPayments  = count_rows($conn, "SELECT id FROM payment");
-$totalUsers     = count_rows($conn, "SELECT id FROM users");
-$sameDayToConfirm = count_rows($conn, "SELECT id FROM rentals WHERE status='Active' AND start_date=end_date AND end_date <= CURDATE()");
-$totalReservations = count_rows($conn, "SELECT id FROM reservations WHERE status IN ('Pending','Confirmed','Waitlisted')");
-$totalAlerts = count_rows($conn, "SELECT id FROM notifications WHERE status='Ready'");
-$openTasks = count_rows($conn, "SELECT id FROM staff_tasks WHERE status IN ('Open','In Progress')");
-$openCases = count_rows($conn, "SELECT id FROM not_returned_cases WHERE status IN ('Open','Followed Up','Reported')");
+$totalCars      = count_rows($conn, "SELECT COUNT(*) FROM cars");
+$availableCars  = count_rows($conn, "SELECT COUNT(*) FROM cars WHERE availability_status = 'Available'");
+$rentedCars     = count_rows($conn, "SELECT COUNT(*) FROM cars WHERE availability_status = 'Rented'");
+$notReturnedCars = count_rows($conn, "SELECT COUNT(*) FROM cars WHERE availability_status = 'Not Returned'");
+$totalCustomers = count_rows($conn, "SELECT COUNT(*) FROM customers");
+$totalRentals   = count_rows($conn, "SELECT COUNT(*) FROM rentals WHERE status <> 'Deleted'");
+$totalPayments  = count_rows($conn, "SELECT COUNT(*) FROM payment p JOIN rentals r ON r.id = p.rental_id WHERE r.status <> 'Deleted'");
+$totalUsers     = count_rows($conn, "SELECT COUNT(*) FROM users");
+// Same-day rentals whose car has not been confirmed as returned yet.
+$sameDayToConfirm = count_rows($conn, "SELECT COUNT(*) FROM rentals WHERE status IN ('Active','Completed') AND returned_at IS NULL AND start_date=end_date AND end_date <= CURDATE()");
+$totalReservations = count_rows($conn, "SELECT COUNT(*) FROM reservations WHERE status IN ('Pending','Confirmed','Waitlisted')");
+$totalAlerts = count_rows($conn, "SELECT COUNT(*) FROM notifications WHERE status='Ready'");
+$openTasks = count_rows($conn, "SELECT COUNT(*) FROM staff_tasks WHERE status IN ('Open','In Progress')");
+$openCases = count_rows($conn, "SELECT COUNT(*) FROM not_returned_cases WHERE status IN ('Open','Followed Up','Reported')");
 
-$recentRentals = $conn->query(" 
+$recentRentals = $conn->query("
     SELECT r.*, c.full_name AS customer_name, ca.reg_no AS car_reg
     FROM rentals r
     LEFT JOIN customers c ON r.customer_id = c.id
     LEFT JOIN cars ca ON r.cars_id = ca.id
+    WHERE r.status <> 'Deleted'
     ORDER BY r.id DESC
     LIMIT 5
 ");
@@ -347,6 +353,12 @@ $recentRentals = $conn->query("
                     <h2><?= h($rentedCars); ?></h2>
                 </div>
 
+                <div class="summary-card red">
+                    <div class="line"></div>
+                    <p>Not Returned Cars</p>
+                    <h2><?= h($notReturnedCars); ?></h2>
+                </div>
+
                 <div class="summary-card purple">
                     <div class="line"></div>
                     <p>Total Customers</p>
@@ -433,7 +445,10 @@ $recentRentals = $conn->query("
                                         $statusText = $rental['status'] ?? 'N/A';
                                         $statusLower = strtolower($statusText);
 
-                                        if ($statusLower === 'active') {
+                                        if ($statusText === 'Completed' && empty($rental['returned_at']) && $rental['end_date'] < cr_today()) {
+                                            $statusText = 'Not returned';
+                                            $statusClass = 'cancelled';
+                                        } elseif ($statusLower === 'active') {
                                             $statusClass = 'active';
                                         } elseif ($statusLower === 'completed') {
                                             $statusClass = 'completed';

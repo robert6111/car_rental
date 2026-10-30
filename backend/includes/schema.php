@@ -4,7 +4,7 @@
  * already ran, so on a normal page load this costs nothing. Raise CR_SCHEMA_VERSION and
  * add a block in cr_run_migrations() whenever the database structure changes.
  */
-if (!defined('CR_SCHEMA_VERSION')) define('CR_SCHEMA_VERSION', 2);
+if (!defined('CR_SCHEMA_VERSION')) define('CR_SCHEMA_VERSION', 3);
 
 function cr_migrate_if_needed(mysqli $conn): void {
     $current = (int)($GLOBALS['__cr_settings']['schema_version'] ?? 0);
@@ -47,6 +47,52 @@ function cr_run_migrations(mysqli $conn, int $from, bool $settingsExisted): void
             $seed += ['currency_code' => 'TRY', 'currency_symbol' => 'TRY', 'currency_position' => 'after', 'phone_country_code' => '255'];
         }
         cr_settings_save($conn, $seed);
+    }
+
+    if ($from < 3) {
+        // Car returns are confirmed by staff (the rental itself finishes automatically).
+        cr_add_column_if_missing($conn, 'rentals', 'returned_at', "returned_at DATETIME NULL AFTER completed_at");
+        cr_add_column_if_missing($conn, 'rentals', 'return_mileage', "return_mileage INT NULL AFTER returned_by");
+        cr_add_column_if_missing($conn, 'rentals', 'return_notes', "return_notes TEXT NULL AFTER return_mileage");
+        // Everything that finished before this upgrade counts as returned.
+        $conn->query("UPDATE rentals SET returned_at = COALESCE(completed_at, CONCAT(end_date, ' 23:59:59'))
+                      WHERE returned_at IS NULL AND status IN ('Completed','Canceled','Deleted')");
+
+        // Recorded late-payment interest: one row per overdue day, never recalculated.
+        $conn->query("CREATE TABLE IF NOT EXISTS rental_charges (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            rental_id INT NOT NULL,
+            charge_type VARCHAR(30) NOT NULL DEFAULT 'late_interest',
+            charge_date DATE NOT NULL,
+            base_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+            rate DECIMAL(8,4) NOT NULL DEFAULT 0.0000,
+            amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_charge_day (rental_id, charge_type, charge_date),
+            KEY idx_charge_rental (rental_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        cr_add_index_if_missing($conn, 'rentals', 'idx_rental_status', 'INDEX idx_rental_status (status)');
+        cr_add_index_if_missing($conn, 'rentals', 'idx_rental_car_dates', 'INDEX idx_rental_car_dates (cars_id, start_date, end_date)');
+        cr_add_index_if_missing($conn, 'reservations', 'idx_res_status_car', 'INDEX idx_res_status_car (status, car_id)');
+        cr_add_index_if_missing($conn, 'payment', 'idx_payment_date', 'INDEX idx_payment_date (payment_date)');
+
+        // Customer forms used to escape text twice, saving "O\'Brien". Repair those values.
+        $bs = chr(92); // backslash
+        $fixes = [$bs . "'" => "'", $bs . '"' => '"', $bs . $bs => $bs];
+        foreach (['full_name', 'phone_number', 'email', 'license_no', 'address', 'id_number', 'passport_no'] as $col) {
+            if (!cr_column_exists($conn, 'customers', $col)) continue;
+            $rows = $conn->query("SELECT id, `$col` AS v FROM customers WHERE LOCATE(CHAR(92), `$col`) > 0");
+            if (!$rows) continue;
+            $upd = $conn->prepare("UPDATE customers SET `$col` = ? WHERE id = ?");
+            while ($row = $rows->fetch_assoc()) {
+                $fixed = strtr((string)$row['v'], $fixes);
+                $id = (int)$row['id'];
+                $upd->bind_param('si', $fixed, $id);
+                $upd->execute();
+            }
+            $upd->close();
+        }
     }
 }
 

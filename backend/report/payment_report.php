@@ -1,14 +1,38 @@
 <?php
 require_once __DIR__ . '/../includes/admin_only.php';
 require __DIR__ . '/../includes/db.php';
-$from_date = $_GET['from_date'] ?? '';
-$to_date = $_GET['to_date'] ?? '';
-$reg_no = $_GET['reg_no'] ?? '';
-$where = 'WHERE 1';
-if ($from_date !== '') $where .= " AND p.payment_date >= '" . $conn->real_escape_string($from_date) . "'";
-if ($to_date !== '') $where .= " AND p.payment_date <= '" . $conn->real_escape_string($to_date) . "'";
-if ($reg_no !== '') $where .= " AND ca.reg_no LIKE '%" . $conn->real_escape_string($reg_no) . "%'";
-$result = $conn->query("SELECT p.id, p.payment_date, p.amount, r.id AS rental_id, c.full_name, ca.reg_no, m.name AS make_name, mo.name AS model_name, y.year AS car_year
+require_once __DIR__ . '/../includes/rental_status.php';
+
+/**
+ * Payment report filters. KEEP IDENTICAL to payment_report_filters() in payment_report_export.php.
+ * Returns [whereSql, bindTypes, bindParams, cleanFilters].
+ */
+function payment_report_filters(array $in): array {
+    $from = (string)($in['from_date'] ?? '');
+    $to = (string)($in['to_date'] ?? '');
+    $search = trim((string)($in['reg_no'] ?? ''));
+    if (!cr_valid_date($from)) $from = '';
+    if (!cr_valid_date($to)) $to = '';
+
+    $where = ["r.status <> 'Deleted'"];
+    $types = '';
+    $params = [];
+    if ($from !== '') { $where[] = 'p.payment_date >= ?'; $types .= 's'; $params[] = $from; }
+    if ($to !== '') { $where[] = 'p.payment_date <= ?'; $types .= 's'; $params[] = $to; }
+    if ($search !== '') {
+        $where[] = '(ca.reg_no LIKE ? OR c.full_name LIKE ?)';
+        $like = '%' . $search . '%';
+        $types .= 'ss'; $params[] = $like; $params[] = $like;
+    }
+    return ['WHERE ' . implode(' AND ', $where), $types, $params, ['from_date' => $from, 'to_date' => $to, 'reg_no' => $search]];
+}
+
+[$where, $types, $params, $filters] = payment_report_filters($_GET);
+$from_date = $filters['from_date'];
+$to_date = $filters['to_date'];
+$reg_no = $filters['reg_no'];
+
+$stmt = $conn->prepare("SELECT p.id, p.payment_date, p.amount, r.id AS rental_id, c.full_name, ca.reg_no, m.name AS make_name, mo.name AS model_name, y.year AS car_year
     FROM payment p
     JOIN rentals r ON p.rental_id = r.id
     JOIN customers c ON r.customer_id = c.id
@@ -18,6 +42,10 @@ $result = $conn->query("SELECT p.id, p.payment_date, p.amount, r.id AS rental_id
     LEFT JOIN car_years y ON ca.year_id = y.id
     $where
     ORDER BY p.payment_date DESC, p.id DESC");
+if ($types !== '') $stmt->bind_param($types, ...$params);
+$stmt->execute();
+$result = $stmt->get_result();
+$stmt->close();
 ?>
 <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Payment Report</title></head>
 <body><?php include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/leftsidebar.php'; ?>
@@ -25,12 +53,12 @@ $result = $conn->query("SELECT p.id, p.payment_date, p.amount, r.id AS rental_id
 <form method="GET" style="margin-bottom:20px; display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
 <div><label>From:</label><br><input type="date" name="from_date" value="<?= h($from_date); ?>"></div>
 <div><label>To:</label><br><input type="date" name="to_date" value="<?= h($to_date); ?>"></div>
-<div><label>Reg No:</label><br><input type="text" name="reg_no" value="<?= h($reg_no); ?>" placeholder="Example: 34 ABC 123"></div>
+<div><label>Reg No / Customer:</label><br><input type="text" name="reg_no" value="<?= h($reg_no); ?>" placeholder="Example: 34 ABC 123"></div>
 <div><button type="submit" class="btn btn-primary">Apply Filters</button>
 <a href="payment_report_export.php?from_date=<?= urlencode($from_date); ?>&to_date=<?= urlencode($to_date); ?>&reg_no=<?= urlencode($reg_no); ?>" class="btn btn-danger" target="_blank">Download PDF</a></div>
 </form>
 <div class="table-responsive"><table class="table" border="1" cellpadding="10"><tr><th>#</th><th>Date</th><th>Customer</th><th>Car</th><th>Reg No</th><th>Rental</th><th>Amount</th></tr>
 <?php if($result && $result->num_rows): $i=1; $total=0; while($row=$result->fetch_assoc()): $total += (float)$row['amount']; $carName = trim(($row['make_name'] ?? '') . ' ' . ($row['model_name'] ?? '') . ' ' . ($row['car_year'] ?? '')); ?>
 <tr><td><?= $i++; ?></td><td><?= h(cr_date($row['payment_date'])) ?></td><td><?= h($row['full_name']); ?></td><td><?= h($carName !== '' ? $carName : $row['reg_no']); ?></td><td><?= h($row['reg_no']); ?></td><td>#<?= h($row['rental_id']); ?></td><td><?= money((float)$row['amount']); ?></td></tr>
-<?php endwhile; ?><tr><th colspan="6">Total</th><th><?= money($total); ?></th></tr><?php else: ?><tr><td colspan="7">No payment records found.</td></tr><?php endif; ?>
+<?php endwhile; ?><tr><th colspan="6">Total (<?= (int)$result->num_rows; ?> payment<?= $result->num_rows == 1 ? '' : 's'; ?>)</th><th><?= money($total); ?></th></tr><?php else: ?><tr><td colspan="7">No payment records found.</td></tr><?php endif; ?>
 </table></div></div></div></body></html>
