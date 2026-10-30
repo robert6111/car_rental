@@ -58,7 +58,13 @@ The system updates rental statuses and late interest by itself while people use 
 scheduled task makes sure it also happens overnight and that the daily backup is always made.
 Run it every hour.
 
-- Windows (XAMPP): open Task Scheduler > Create Basic Task
+- Windows, quick way (no administrator rights needed; runs while that user is logged on,
+  which is enough when XAMPP is started by hand). In a Command Prompt:
+    schtasks /Create /TN "Car Rental jobs" /SC HOURLY /TR "wscript.exe \"C:\xampp\htdocs\car_rental\cron\run-hidden.vbs\"" /F
+  run-hidden.vbs runs the job without a window popping up every hour.
+
+- Windows server / PC where Apache and MySQL run as Windows services (always on):
+  open Task Scheduler (as administrator) > Create Basic Task
     Name: Car Rental jobs
     Trigger: Daily, then in the task's Properties > Triggers > Edit, tick
              "Repeat task every: 1 hour" for a duration of "Indefinitely"
