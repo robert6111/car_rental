@@ -1,0 +1,47 @@
+# Car Rental - example nginx site (nginx does not read .htaccess files).
+# Copy into your server block and adjust server_name, root, certificate paths and the PHP socket.
+# 'root' is the car_rental folder (the one that contains backend/, config/, storage/).
+
+server {
+    listen 80;
+    server_name rent.example.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name rent.example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/rent.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/rent.example.com/privkey.pem;
+
+    root /var/www/car_rental;
+    index index.php;
+
+    # Uploads: documents are limited to 10 MB by the system.
+    client_max_body_size 12m;
+
+    # Private folders and files - never served.
+    location ~ ^/(config|storage|vendor|cron|backend/database)(/|$) { return 404; }
+    location ~ /\.(?!well-known/)                                    { return 404; }
+    location ~ \.(md|txt|log|sql|lock|json|bat|example)$             { return 404; }
+    location ~ ^/backend/includes/.*\.(php|inc|ini|env|bak)$         { return 404; }
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    location ~ \.php$ {
+        try_files $uri =404;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param HTTPS $https if_not_empty;
+        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+    }
+
+    # Static files (CSS, JS, icons) are versioned by the system, so they can be cached.
+    location ~* \.(css|js|svg|png|jpg|jpeg|webp|ico)$ {
+        expires 30d;
+        access_log off;
+    }
+}

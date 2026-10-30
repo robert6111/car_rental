@@ -12,6 +12,7 @@ return [
         // Full public address of the backend folder, without trailing slash.
         // Examples: 'https://rent.example.com/backend' or 'http://192.168.1.20/car_rental/backend'
         // Required for password-reset emails and booking links. Leave empty to auto-detect (LAN use only).
+        // When it starts with https://, visitors who open that host over plain http are sent to https.
         'url' => '',
 
         // true only while developing: shows PHP errors on screen. Keep false on live systems.

@@ -1,7 +1,18 @@
-CAR RENTAL - INSTALLATION
+CAR RENTAL - INSTALLATION AND GO-LIVE
 
+Requirements
+- PHP 8.0 or newer with: mysqli, mbstring, fileinfo, json, session
+  (recommended: openssl for secure email, zlib for logos in PDFs, OPcache for speed)
+- MySQL 5.7+ or MariaDB 10.3+
+- Apache (XAMPP, cPanel hosting), nginx or IIS
+- No internet connection is needed: all fonts, icons and scripts are part of the system.
+
+
+1. INSTALL
 1. Copy the whole car_rental folder to the web server (for XAMPP: C:\xampp\htdocs\car_rental).
+   Do not copy the storage folder or config/config.php from another installation.
 2. Create a MySQL/MariaDB database (e.g. car_rental) and a database user with access to it.
+   Use a separate user with a strong password, not 'root'.
 3. Import backend/database/database.sql into that database (phpMyAdmin > Import).
 4. Copy config/config.example.php to config/config.php and fill in:
    - db: host, name, user, password
@@ -10,10 +21,39 @@ CAR RENTAL - INSTALLATION
    - mail: SMTP details, so password-reset emails can be sent (optional)
 5. Open the address in a browser (e.g. http://localhost/car_rental/).
    The first visit opens "Create Admin Account": create the main administrator there.
-6. Log in and create the other staff accounts under Users.
-7. Set up the scheduled task (below).
+6. Log in, open Settings and set the business name, currency, timezone and phone code.
+7. Create the other staff accounts under Users.
+8. Set up the scheduled task (section 3).
+9. Open Administration > System check and fix anything marked "Fix" (section 5).
 
-Scheduled task (rental statuses, late interest, daily backup)
+
+2. WEB SERVER AND HTTPS
+Private folders must never be reachable from the web: config/, storage/, vendor/, cron/,
+backend/database/ and the PHP files in backend/includes/. The System check tests this.
+
+- Apache (XAMPP, most hosting): the included .htaccess files do it.
+  "AllowOverride All" must be enabled for the folder (it is on XAMPP and cPanel).
+- IIS: the included web.config files do it (Request Filtering must be installed).
+- nginx: does not read .htaccess. Copy the rules from config/nginx.conf.example
+  into the site configuration.
+
+HTTPS (needed for any system reachable from the internet)
+- Hosting / cPanel: turn on the free certificate (AutoSSL or Let's Encrypt), then set
+  app.url in config/config.php to the https:// address. Visitors who open the http://
+  address are then sent to https:// automatically, and sign-in cookies are only sent
+  over HTTPS.
+- Behind a proxy or load balancer that handles HTTPS (Cloudflare, a hosting panel proxy):
+  also set 'trust_proxy' => true in config/config.php.
+- Office network only (LAN): plain http on the office IP address is acceptable.
+  For HTTPS on a LAN, XAMPP's Apache can serve https:// with its own certificate
+  (browsers show a warning unless the certificate is installed on each computer).
+
+Recommended PHP / server settings for live use
+- php.ini: opcache.enable=1, upload_max_filesize=12M, post_max_size=16M, expose_php=Off
+- Apache: ServerTokens Prod and ServerSignature Off (hides version numbers)
+
+
+3. SCHEDULED TASK (rental statuses, late interest, daily backup)
 The system updates rental statuses and late interest by itself while people use it, but the
 scheduled task makes sure it also happens overnight and that the daily backup is always made.
 Run it every hour.
@@ -32,21 +72,43 @@ Run it every hour.
     0 * * * *  php /path/to/car_rental/cron/run.php >> /path/to/car_rental/storage/logs/scheduled.log 2>&1
   (On cPanel: Cron Jobs > "Once Per Hour", with the same command.)
 
-- Check it works: Settings > "Lists and backups" shows when it last ran.
+- Check it works: System check > Operations shows when it last ran.
   Until it runs, the daily backup is made when someone opens the dashboard.
 
-Backups
+
+4. BACKUPS
 - Automatic backups are kept for the number of days set in Settings (default 30).
-  Manual backups (Backup page) are kept until you delete them from storage/backups.
+  Manual backups (Backups page) are kept until you delete them from storage/backups.
 - Copy backups to another computer, USB drive or cloud storage regularly. A backup that
   lives only on the same computer is lost if that computer fails.
 - To restore: create an empty database and import the .sql file (phpMyAdmin > Import,
   or: mysql -u USER -p DATABASE < backup.sql), then point config/config.php at it.
 
+
+5. GO-LIVE CHECKLIST
+[ ] System check (Administration > System check, or: php cron/check.php) shows no "Fix" items
+[ ] HTTPS works and app.url starts with https:// (internet systems)
+[ ] 'debug' is false in config/config.php
+[ ] Settings reviewed: business name, logo, currency, timezone, phone code, late interest
+[ ] Real administrator account created; test / temporary accounts deleted or deactivated
+[ ] Each staff member has their own account with the right role
+[ ] "Send test email to me" (Settings) arrives, so password resets work
+[ ] Scheduled task runs every hour (System check shows a recent run)
+[ ] A backup exists and a copy is kept on another device
+[ ] Public booking page switched on or off as wanted (Settings)
+[ ] One test rental from start to return and payment, then delete or cancel it
+
+
+6. UPDATING TO A NEW VERSION
+1. Make a backup (Backups page) and copy it off the server.
+2. Replace the program files with the new version. Keep config/config.php and the
+   storage folder - they hold the settings, documents, backups and logs.
+3. Open any page: database changes are applied automatically on the first visit.
+4. Open System check to confirm everything is green.
+
+
 Security notes
 - config/config.php contains passwords. Never share it.
 - Uploaded documents, backups and logs are kept in the storage/ folder, which is blocked
   from the web. On hosting, you can move it outside the public folder and set 'storage_path'.
-- On Apache, .htaccess files protect private folders (AllowOverride must be enabled).
-  On nginx/IIS, deny web access to: config/, storage/, vendor/, cron/, backend/includes/*.php, backend/database/.
-- Use HTTPS on any system reachable from the internet.
+- Errors are written to storage/logs/php-error.log, never shown to visitors (unless 'debug' is true).

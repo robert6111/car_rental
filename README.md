@@ -5,8 +5,12 @@ Plain PHP 8.0+ and MySQL / MariaDB. It needs no internet connection: every
 font, icon and script is served by the system itself, so it runs both on web
 hosting and on an office network (XAMPP).
 
-Installation, the scheduled task and backups: see
+Installation, HTTPS and web server rules, the scheduled task, backups, the go-live
+checklist and updating: see
 [backend/database/INSTALLATION_NOTES.txt](backend/database/INSTALLATION_NOTES.txt).
+Before going live, open **Administration > System check** (or run
+`php cron/check.php`): it tests the server, configuration, HTTPS, that private
+folders are refused by the web server, the database, the scheduled task and backups.
 
 ## What it does
 
@@ -43,8 +47,8 @@ public booking on/off; rows per list; how long automatic backups are kept.
 | `backend/` | The application (one folder per module) |
 | `backend/includes/` | Shared code: security, database, settings, layout, rental rules |
 | `backend/database/` | `database.sql` (fresh install) and installation notes |
-| `config/` | `config.php` with database and mail details (not in git) |
-| `cron/` | Scheduled task (`run.php`, `run-scheduled.bat`), blocked from the web |
+| `config/` | `config.php` with database and mail details (not in git); `nginx.conf.example` |
+| `cron/` | Scheduled task (`run.php`, `run-scheduled.bat`) and `check.php`, blocked from the web |
 | `storage/` | Uploaded documents, backups and logs, blocked from the web (not in git) |
 | `vendor/` | FPDF / FPDI (PDF reports) and PHPMailer |
 
@@ -52,7 +56,9 @@ public booking on/off; rows per list; how long automatic backups are kept.
 
 Sessions with idle timeout, login throttling, CSRF protection on every form,
 signed links for actions, role permissions per page, prepared SQL statements,
-uploads stored outside the web folder, and security headers. Use HTTPS on any
+uploads stored outside the web folder, security headers, and automatic redirect
+to HTTPS when the system address is https://. Web server rules are included for
+Apache (`.htaccess`) and IIS (`web.config`), with an example for nginx. Use HTTPS on any
 system reachable from the internet.
 
 ## Developer notes

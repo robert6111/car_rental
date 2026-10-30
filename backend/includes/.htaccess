@@ -1,8 +1,15 @@
 # Allow public assets from includes but block internal PHP/config/data files.
-<FilesMatch "\.(php|inc|sql|bak|env|ini|log)$">
+<FilesMatch "\.(php|inc|sql|bak|env|ini|log|config)$">
     Require all denied
 </FilesMatch>
 <FilesMatch "\.(css|js|png|jpg|jpeg|gif|svg|webp|ico|woff|woff2|ttf|eot|pdf)$">
     Require all granted
 </FilesMatch>
 Options -Indexes
+
+# CSS, JS and icons are linked with a version number (?v=...), so browsers may keep them.
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js|svg|png|jpg|jpeg|webp|ico)$">
+        Header set Cache-Control "public, max-age=2592000"
+    </FilesMatch>
+</IfModule>

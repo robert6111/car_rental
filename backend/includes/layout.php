@@ -143,6 +143,7 @@ function cr_nav_items(): array {
         ['type' => 'link', 'label' => 'Import data', 'icon' => 'upload', 'path' => 'import/import.php', 'perm' => 'import_manage'],
         ['type' => 'link', 'label' => 'Backups', 'icon' => 'database', 'path' => 'backup/backup.php', 'perm' => 'backup_manage'],
         ['type' => 'link', 'label' => 'Settings', 'icon' => 'settings', 'path' => 'settings/index.php', 'perm' => 'settings_manage'],
+        ['type' => 'link', 'label' => 'System check', 'icon' => 'shield', 'path' => 'settings/system.php', 'perm' => 'settings_manage'],
     ];
 }
 

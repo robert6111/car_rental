@@ -1,14 +1,16 @@
-# Car Rental - root protection
+# Car Rental - root protection (Apache). IIS uses web.config, nginx see config/nginx.conf.example.
 Options -Indexes
 DirectoryIndex index.php
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
     # Block private folders and files from the web
-    RewriteRule ^(config|storage|vendor|cron|\.git)(/|$) - [F,L]
-    RewriteRule ^(composer\.(json|lock)|.*\.(md|txt|log|sql|lock))$ - [F,L]
+    RewriteRule ^(config|storage|vendor|cron)(/|$) - [F,L]
+    # Dot files and folders (.git, .env ...) - but keep .well-known/ for HTTPS certificates
+    RewriteRule (^|/)\.(?!well-known/) - [F,L]
+    RewriteRule ^(composer\.(json|lock)|web\.config|.*\.(md|txt|log|sql|lock|bat|example))$ - [F,L]
 </IfModule>
 
-<FilesMatch "^(composer\.(json|lock)|.*\.(md|txt|log|sql))$">
+<FilesMatch "^(\..*|composer\.(json|lock)|web\.config|.*\.(md|txt|log|sql|bat|example))$">
     Require all denied
 </FilesMatch>

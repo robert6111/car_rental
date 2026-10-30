@@ -92,8 +92,27 @@ function stock_start_secure_session(): void {
     session_start();
 }
 
+/**
+ * When app.url in config.php starts with https://, visitors who reach the same host over
+ * plain http are sent to the https address. Other hosts (e.g. a LAN IP) are left alone.
+ */
+function stock_force_https(): void {
+    if (PHP_SAPI === 'cli' || stock_is_https()) return;
+    $url = (string)cr_config('app.url', '');
+    if (stripos($url, 'https://') !== 0) return;
+    $wantHost = strtolower((string)parse_url($url, PHP_URL_HOST));
+    $host = strtolower(preg_replace('/:\d+$/', '', (string)($_SERVER['HTTP_HOST'] ?? '')));
+    if ($wantHost === '' || $host !== $wantHost) return;
+    $port = parse_url($url, PHP_URL_PORT);
+    $target = 'https://' . $wantHost . ($port ? ':' . (int)$port : '') . ($_SERVER['REQUEST_URI'] ?? '/');
+    $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+    header('Location: ' . $target, true, in_array($method, ['GET', 'HEAD'], true) ? 301 : 308);
+    exit;
+}
+
 function stock_security_headers(): void {
     if (headers_sent() || PHP_SAPI === 'cli') return;
+    header_remove('X-Powered-By');
     header('X-Frame-Options: SAMEORIGIN');
     header('X-Content-Type-Options: nosniff');
     header('Referrer-Policy: same-origin');
@@ -431,6 +450,7 @@ function e($value): string {
     return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+stock_force_https();
 stock_start_secure_session();
 stock_check_idle_timeout();
 stock_refresh_session_user();
