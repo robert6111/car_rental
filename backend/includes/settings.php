@@ -5,6 +5,8 @@
  * rates, company details, email), so the system can be set up for any country.
  */
 
+require_once __DIR__ . '/countries.php';
+
 function cr_settings_definitions(): array {
     return [
         // Business
@@ -24,6 +26,7 @@ function cr_settings_definitions(): array {
         'decimal_separator'   => ['default' => '.', 'type' => 'choice', 'choices' => ['.', ',']],
         'thousands_separator' => ['default' => ',', 'type' => 'choice', 'choices' => [',', '.', ' ', "'", '']],
         'currency_decimals'   => ['default' => '2', 'type' => 'int', 'min' => 0, 'max' => 3],
+        'country'             => ['default' => '', 'type' => 'choice', 'choices' => array_merge([''], array_keys(cr_countries()))],
         'timezone'            => ['default' => '', 'type' => 'timezone'],
         'date_format'         => ['default' => 'Y-m-d', 'type' => 'choice', 'choices' => ['Y-m-d', 'd/m/Y', 'm/d/Y', 'd.m.Y', 'd-m-Y']],
         'phone_country_code'  => ['default' => '', 'type' => 'digits', 'max' => 4],

@@ -85,27 +85,10 @@ function select_options(array $options, string $current): string {
 
 $timezones = DateTimeZone::listIdentifiers();
 $currentTz = sv('timezone') !== '' ? sv('timezone') : date_default_timezone_get();
-$commonCurrencies = [ // code => [name, symbol]
-    'KES' => ['Kenyan shilling', 'KSh'], 'TZS' => ['Tanzanian shilling', 'TSh'], 'UGX' => ['Ugandan shilling', 'USh'],
-    'RWF' => ['Rwandan franc', 'FRw'], 'BIF' => ['Burundian franc', 'FBu'], 'ETB' => ['Ethiopian birr', 'Br'],
-    'SSP' => ['South Sudanese pound', 'SSP'], 'SOS' => ['Somali shilling', 'Sh'], 'CDF' => ['Congolese franc', 'FC'],
-    'ZMW' => ['Zambian kwacha', 'ZK'], 'MWK' => ['Malawian kwacha', 'MK'], 'MZN' => ['Mozambican metical', 'MT'],
-    'ZAR' => ['South African rand', 'R'], 'BWP' => ['Botswana pula', 'P'], 'NAD' => ['Namibian dollar', 'N$'],
-    'NGN' => ['Nigerian naira', '₦'], 'GHS' => ['Ghanaian cedi', 'GH₵'], 'XOF' => ['West African CFA franc', 'CFA'],
-    'XAF' => ['Central African CFA franc', 'FCFA'], 'EGP' => ['Egyptian pound', 'E£'], 'MAD' => ['Moroccan dirham', 'DH'],
-    'TND' => ['Tunisian dinar', 'DT'], 'DZD' => ['Algerian dinar', 'DA'],
-    'USD' => ['US dollar', '$'], 'EUR' => ['Euro', '€'], 'GBP' => ['British pound', '£'], 'CHF' => ['Swiss franc', 'CHF'],
-    'CAD' => ['Canadian dollar', 'C$'], 'AUD' => ['Australian dollar', 'A$'], 'NZD' => ['New Zealand dollar', 'NZ$'],
-    'TRY' => ['Turkish lira', '₺'], 'RUB' => ['Russian ruble', '₽'], 'UAH' => ['Ukrainian hryvnia', '₴'], 'PLN' => ['Polish złoty', 'zł'],
-    'SEK' => ['Swedish krona', 'kr'], 'NOK' => ['Norwegian krone', 'kr'], 'DKK' => ['Danish krone', 'kr'],
-    'AED' => ['UAE dirham', 'AED'], 'SAR' => ['Saudi riyal', 'SAR'], 'QAR' => ['Qatari riyal', 'QAR'], 'KWD' => ['Kuwaiti dinar', 'KD'],
-    'OMR' => ['Omani rial', 'OMR'], 'BHD' => ['Bahraini dinar', 'BD'], 'JOD' => ['Jordanian dinar', 'JD'], 'ILS' => ['Israeli shekel', '₪'],
-    'INR' => ['Indian rupee', '₹'], 'PKR' => ['Pakistani rupee', 'Rs'], 'BDT' => ['Bangladeshi taka', '৳'], 'LKR' => ['Sri Lankan rupee', 'Rs'],
-    'CNY' => ['Chinese yuan', '¥'], 'JPY' => ['Japanese yen', '¥'], 'KRW' => ['South Korean won', '₩'], 'IDR' => ['Indonesian rupiah', 'Rp'],
-    'MYR' => ['Malaysian ringgit', 'RM'], 'SGD' => ['Singapore dollar', 'S$'], 'THB' => ['Thai baht', '฿'], 'PHP' => ['Philippine peso', '₱'],
-    'VND' => ['Vietnamese dong', '₫'], 'BRL' => ['Brazilian real', 'R$'], 'MXN' => ['Mexican peso', 'MX$'], 'ARS' => ['Argentine peso', 'AR$'],
-    'CLP' => ['Chilean peso', 'CLP$'], 'COP' => ['Colombian peso', 'COL$'],
-];
+$currencies = cr_currencies();
+$countries = cr_countries();
+uasort($countries, fn($x, $y) => strcmp($x[0], $y[0]));
+$curCountry = sv('country');
 $dateFormats = ['Y-m-d' => '2026-12-31', 'd/m/Y' => '31/12/2026', 'm/d/Y' => '12/31/2026', 'd.m.Y' => '31.12.2026', 'd-m-Y' => '31-12-2026'];
 $thousands = [',' => 'Comma ( 1,000 )', '.' => 'Dot ( 1.000 )', ' ' => 'Space ( 1 000 )', "'" => "Apostrophe ( 1'000 )", '' => 'None ( 1000 )'];
 ?>
@@ -150,12 +133,22 @@ $thousands = [',' => 'Comma ( 1,000 )', '.' => 'Dot ( 1.000 )', ' ' => 'Space ( 
         <h2 class="section-title mb-0">Region, currency and dates</h2>
         <p class="page-sub mb-4">Set these for the country where the business operates.</p>
         <div class="form-grid">
+            <div class="field span-all">
+                <label for="country">Country</label>
+                <select id="country" name="country">
+                    <option value="">- Choose the country -</option>
+                    <?php foreach ($countries as $iso => [$cname]): ?>
+                    <option value="<?= h($iso); ?>"<?= $iso === $curCountry ? ' selected' : ''; ?>><?= h($cname); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <span class="hint" id="countryHint">Choosing a country fills in the currency, decimals, timezone, date format and phone code below. You can still change each one before saving.</span><?= field_error('country'); ?>
+            </div>
             <div class="field">
                 <label for="currency_code">Currency code <span class="req">*</span></label>
-                <?php $curCode = strtoupper(sv('currency_code')); $curKnown = isset($commonCurrencies[$curCode]); ?>
+                <?php $curCode = strtoupper(sv('currency_code')); $curKnown = isset($currencies[$curCode]); ?>
                 <select id="currency_code" name="currency_code" required>
-                    <?php foreach ($commonCurrencies as $code => [$cname, $csym]): ?>
-                    <option value="<?= h($code); ?>" data-symbol="<?= h($csym); ?>"<?= $code === $curCode ? ' selected' : ''; ?>><?= h($code . ' - ' . $cname . ' (' . $csym . ')'); ?></option>
+                    <?php foreach ($currencies as $code => [$cname, $csym, $cdec]): ?>
+                    <option value="<?= h($code); ?>" data-symbol="<?= h($csym); ?>" data-decimals="<?= (int)$cdec; ?>"<?= $code === $curCode ? ' selected' : ''; ?>><?= h($code . ' - ' . $cname . ' (' . $csym . ')'); ?></option>
                     <?php endforeach; ?>
                     <option value="OTHER"<?= $curKnown ? '' : ' selected'; ?>>Other (type the code)</option>
                 </select>
@@ -167,7 +160,11 @@ $thousands = [',' => 'Comma ( 1,000 )', '.' => 'Dot ( 1.000 )', ' ' => 'Space ( 
             <div class="field"><label for="currency_decimals">Decimal places</label><select id="currency_decimals" name="currency_decimals"><?= select_options(['0' => '0 (100)', '1' => '1 (100.5)', '2' => '2 (100.50)', '3' => '3 (100.500)'], sv('currency_decimals')); ?></select></div>
             <div class="field"><label for="decimal_separator">Decimal separator</label><select id="decimal_separator" name="decimal_separator"><?= select_options(['.' => 'Dot ( 10.50 )', ',' => 'Comma ( 10,50 )'], sv('decimal_separator')); ?></select></div>
             <div class="field"><label for="thousands_separator">Thousands separator</label><select id="thousands_separator" name="thousands_separator"><?= select_options($thousands, sv('thousands_separator')); ?></select><?= field_error('thousands_separator'); ?></div>
-            <div class="field"><label for="timezone">Timezone</label><select id="timezone" name="timezone"><?php foreach ($timezones as $tz): ?><option value="<?= h($tz); ?>"<?= $tz === $currentTz ? ' selected' : ''; ?>><?= h(str_replace('_', ' ', $tz)); ?></option><?php endforeach; ?></select><?= field_error('timezone'); ?></div>
+            <div class="field"><label for="timezone">Timezone</label><select id="timezone" name="timezone">
+                <?php $countryZones = $curCountry !== '' ? cr_country_timezones($curCountry) : []; ?>
+                <?php if ($countryZones): ?><optgroup label="<?= h($countries[$curCountry][0]); ?>"><?php foreach ($countryZones as $tz): ?><option value="<?= h($tz); ?>"<?= $tz === $currentTz ? ' selected' : ''; ?>><?= h(str_replace('_', ' ', $tz)); ?></option><?php endforeach; ?></optgroup><?php endif; ?>
+                <optgroup label="All timezones"><?php foreach (array_diff($timezones, $countryZones) as $tz): ?><option value="<?= h($tz); ?>"<?= $tz === $currentTz ? ' selected' : ''; ?>><?= h(str_replace('_', ' ', $tz)); ?></option><?php endforeach; ?></optgroup>
+            </select><?= field_error('timezone'); ?></div>
             <div class="field"><label for="date_format">Date format</label><select id="date_format" name="date_format"><?= select_options($dateFormats, sv('date_format')); ?></select></div>
             <div class="field"><label for="phone_country_code">Phone country code</label><input type="text" id="phone_country_code" name="phone_country_code" value="<?= h(sv('phone_country_code')); ?>" maxlength="4" inputmode="numeric" placeholder="e.g. 90, 254, 1"><span class="hint">Digits only, used for WhatsApp links. Local numbers starting with 0 get this code.</span></div>
             <div class="field span-all"><?= cr_alert('info', 'Preview: <strong>' . money(1234567.891) . '</strong> · <strong>' . h(cr_date('2026-12-31')) . '</strong> · Current time: <strong>' . h(cr_date(date('Y-m-d H:i:s'), true)) . '</strong> <span class="muted">(updates after saving)</span>', true); ?></div>
@@ -235,19 +232,60 @@ $thousands = [',' => 'Comma ( 1,000 )', '.' => 'Dot ( 1.000 )', ' ' => 'Space ( 
 <form method="post" id="testEmailForm">
     <input type="hidden" name="action" value="test_email">
 </form>
+<?php
+$countryJs = [];
+foreach ($countries as $iso => [$cname, $ccur, $cphone, $cmain, $cdate]) {
+    $countryJs[$iso] = ['name' => $cname, 'currency' => $ccur, 'phone' => $cphone, 'date' => $cdate, 'zones' => cr_country_timezones($iso)];
+}
+?>
 <script>
 (function () {
-    var code = document.getElementById('currency_code');
-    var other = document.getElementById('currency_code_other');
-    var symbol = document.getElementById('currency_symbol');
+    var countries = <?= json_encode($countryJs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
+    var allZones = <?= json_encode(array_values($timezones), JSON_UNESCAPED_SLASHES | JSON_HEX_TAG); ?>;
+    var $ = function (id) { return document.getElementById(id); };
+    var country = $('country'), code = $('currency_code'), other = $('currency_code_other'), symbol = $('currency_symbol'),
+        decimals = $('currency_decimals'), tz = $('timezone'), dateFormat = $('date_format'), phone = $('phone_country_code'), hint = $('countryHint');
     if (!code) return;
-    code.addEventListener('change', function () {
+
+    function zoneOption(z, selected) {
+        var o = document.createElement('option');
+        o.value = z; o.textContent = z.replace(/_/g, ' '); o.selected = selected;
+        return o;
+    }
+    // Rebuild the timezone list: the country's zones first, then all the others.
+    function fillZones(zones, selectedZone) {
+        tz.innerHTML = '';
+        if (zones.length) {
+            var g = document.createElement('optgroup');
+            g.label = countries[country.value].name;
+            zones.forEach(function (z) { g.appendChild(zoneOption(z, z === selectedZone)); });
+            tz.appendChild(g);
+        }
+        var rest = document.createElement('optgroup');
+        rest.label = 'All timezones';
+        allZones.forEach(function (z) { if (zones.indexOf(z) === -1) rest.appendChild(zoneOption(z, z === selectedZone)); });
+        tz.appendChild(rest);
+    }
+    function applyCurrency() {
         var opt = code.options[code.selectedIndex];
         var isOther = code.value === 'OTHER';
         other.hidden = !isOther;
         other.required = isOther;
-        if (isOther) { other.focus(); return; }
-        if (symbol && opt.getAttribute('data-symbol')) symbol.value = opt.getAttribute('data-symbol');
+        if (isOther) return;
+        if (opt.getAttribute('data-symbol')) symbol.value = opt.getAttribute('data-symbol');
+        if (opt.getAttribute('data-decimals') !== null) decimals.value = opt.getAttribute('data-decimals');
+    }
+
+    code.addEventListener('change', function () { applyCurrency(); if (code.value === 'OTHER') other.focus(); });
+
+    country.addEventListener('change', function () {
+        var c = countries[country.value];
+        if (!c) return;
+        if (code.querySelector('option[value="' + c.currency + '"]')) { code.value = c.currency; applyCurrency(); }
+        fillZones(c.zones, c.zones[0]);
+        dateFormat.value = c.date;
+        phone.value = c.phone;
+        hint.textContent = 'Filled in for ' + c.name + ': ' + c.currency + ', ' + c.zones[0].replace(/_/g, ' ') + ', +' + c.phone + '. Check the values below, then save.';
     });
 })();
 </script>
