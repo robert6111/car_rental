@@ -1,7 +1,5 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
-error_reporting(0);
-ini_set('display_errors', 0);
 require __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/rental_status.php';
 sync_rental_and_car_status($conn);
@@ -29,6 +27,6 @@ $result = $conn->query($sql);
 <table border="1" cellpadding="10"><tr><th>#</th><th>Customer</th><th>Car</th><th>Registration No</th><th>Start Date</th><th>End Date</th><th>Cost</th><th>Action Needed</th><th>Status</th></tr>
 <?php if($result && $result->num_rows > 0): $count = 1; ?><?php while($row = $result->fetch_assoc()): ?>
 <?php $carName = trim(($row['make_name'] ?? '') . ' ' . ($row['model_name'] ?? '') . ' ' . ($row['car_year'] ?? '')); $sameDay=overdue_same_day_completion_needed($row['rental_status'], $row['start_date'], $row['end_date']); ?>
-<tr><td><?= $count++ ?></td><td><?= h($row['customer_name']) ?></td><td><?= h($carName !== '' ? $carName : $row['car_reg']) ?></td><td><?= h($row['car_reg']) ?></td><td><?= h($row['start_date']) ?></td><td><?= h($row['end_date']) ?></td><td><?= number_format((float)$row['total_cost'], 2) ?> TRY</td><td><?= $sameDay ? '<span class="badge-action">Same-day rental: confirm return manually</span>' : 'Auto-completes after end date' ?></td><td><?= h($row['rental_status']) ?></td></tr>
+<tr><td><?= $count++ ?></td><td><?= h($row['customer_name']) ?></td><td><?= h($carName !== '' ? $carName : $row['car_reg']) ?></td><td><?= h($row['car_reg']) ?></td><td><?= h(cr_date($row['start_date'])) ?></td><td><?= h(cr_date($row['end_date'])) ?></td><td><?= money((float)$row['total_cost']) ?></td><td><?= $sameDay ? '<span class="badge-action">Same-day rental: confirm return manually</span>' : 'Auto-completes after end date' ?></td><td><?= h($row['rental_status']) ?></td></tr>
 <?php endwhile; ?><?php else: ?><tr><td colspan="9" class="text-center">No active rentals found.</td></tr><?php endif; ?></table><a href="manage.php">Back to All Rentals</a></div></body></html>
 <?php if($result) $result->free(); $conn->close(); ?>

@@ -1,7 +1,4 @@
 <?php
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-error_reporting(0);
 require_once __DIR__ . '/../includes/admin_only.php';
 require __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/pdf_report_helper.php';
@@ -30,7 +27,7 @@ $pdf->AddPage();
 $pdf->reportTitle('Payment Report', ['From' => $from_date, 'To' => $to_date, 'Reg No' => $reg_no]);
 
 $w = [8, 24, 40, 36, 27, 18, 37];
-$headers = ['#','Date','Customer','Car','Reg No','Rental','Amount'];
+$headers = ['#','Date','Customer','Car','Reg No','Rental','Amount (' . $pdf->safeText(cr_setting('currency_code'), 5) . ')'];
 $drawHeader = function() use ($pdf, $w, $headers) {
     $pdf->SetFont('Arial','B',8);
     $pdf->SetFillColor(44, 62, 80);
@@ -50,17 +47,17 @@ if($result && $result->num_rows){
         $carName = trim(($row['make_name'] ?? '') . ' ' . ($row['model_name'] ?? '') . ' ' . ($row['car_year'] ?? ''));
         if ($carName === '') $carName = $row['reg_no'];
         $pdf->Cell($w[0],6,$i++,1);
-        $pdf->Cell($w[1],6,$row['payment_date'],1);
+        $pdf->Cell($w[1],6,cr_date($row['payment_date']),1);
         $pdf->Cell($w[2],6,$pdf->safeText($row['full_name'], 26),1);
         $pdf->Cell($w[3],6,$pdf->safeText($carName, 24),1);
         $pdf->Cell($w[4],6,$pdf->safeText($row['reg_no'], 16),1);
         $pdf->Cell($w[5],6,'#'.$row['rental_id'],1);
-        $pdf->Cell($w[6],6,number_format((float)$row['amount'],2),1,1,'R');
+        $pdf->Cell($w[6],6,cr_number($row['amount']),1,1,'R');
     }
     if ($pdf->GetY() > 260) { $pdf->AddPage(); $drawHeader(); }
     $pdf->SetFont('Arial','B',8);
     $pdf->Cell(array_sum(array_slice($w,0,6)),7,'Total',1,0,'R');
-    $pdf->Cell($w[6],7,number_format($total,2),1,1,'R');
+    $pdf->Cell($w[6],7,$pdf->safeText(money_text($total), 30),1,1,'R');
 } else {
     $pdf->Cell(array_sum($w),7,'No payment records found.',1,1,'C');
 }

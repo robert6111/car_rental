@@ -355,3 +355,9 @@ CREATE TABLE rate_limits (
   created_at DATETIME NOT NULL,
   KEY idx_rate_bucket (bucket, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE settings (
+  setting_key VARCHAR(100) NOT NULL PRIMARY KEY,
+  setting_value TEXT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

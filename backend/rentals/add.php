@@ -1,7 +1,5 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
-error_reporting(0);
-ini_set('display_errors', 0);
 
 require __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/rental_status.php';
@@ -108,9 +106,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="pricing-summary" id="pricing_summary" style="display:none;">
             <div><span>Rental Days</span><strong id="summary_days">0</strong></div>
-            <div><span>Subtotal</span><strong id="summary_subtotal">0.00 TRY</strong></div>
-            <div class="discount-line"><span>Loyalty Discount</span><strong id="summary_discount">0.00 TRY</strong></div>
-            <div><span>Final Cost</span><strong id="summary_total">0.00 TRY</strong></div>
+            <div><span>Subtotal</span><strong id="summary_subtotal">-</strong></div>
+            <div class="discount-line"><span>Loyalty Discount</span><strong id="summary_discount">-</strong></div>
+            <div><span>Final Cost</span><strong id="summary_total">-</strong></div>
         </div>
 
         <label>Cost:</label><br><input type="number" step="0.01" name="total_cost" id="total_cost" readonly><br><br>
@@ -118,10 +116,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </form>
 </div>
 <script>
-const loyaltyMinRentals = <?= (int)LOYALTY_DISCOUNT_MIN_RENTALS ?>;
-const loyaltyDiscountRate = <?= json_encode((float)LOYALTY_DISCOUNT_RATE) ?>;
+const MONEY = <?= cr_money_js_config() ?>;
+function fmtMoney(n){const neg=n<0;n=Math.abs(n);let [i,f]=n.toFixed(MONEY.decimals).split('.');i=i.replace(/\B(?=(\d{3})+(?!\d))/g,MONEY.thou);const num=f?i+MONEY.dec+f:i;const out=MONEY.position==='after'?num+' '+MONEY.symbol:MONEY.symbol+(MONEY.symbol.length>1?' ':'')+num;return (neg?'-':'')+out;}
+const loyaltyMinRentals = <?= (int)loyalty_min_rentals() ?>;
+const loyaltyDiscountRate = <?= json_encode(loyalty_discount_fraction()) ?>;
 function updateCarDetails(){const s=document.getElementById('car_id'),d=document.getElementById('car_details'),o=s.options[s.selectedIndex];d.innerHTML=(o&&o.value)?'Car: '+(o.dataset.make||'')+' '+(o.dataset.model||'')+' '+(o.dataset.year||'')+' - Reg No: '+(o.dataset.reg_no||''):'';updateCost();}
 function rentalDays(a,b){const s=new Date(a),e=new Date(b);if(e<s)return 0;return Math.max(1,Math.ceil((e-s)/(1000*3600*24)));}
-function updateCost(){const car=document.getElementById('car_id'),cust=document.getElementById('customer_id'),start=document.getElementById('start_date').value,end=document.getElementById('end_date').value,input=document.getElementById('total_cost'),sum=document.getElementById('pricing_summary');if(!car.value||!cust.value||!start||!end){input.value='';sum.style.display='none';return;}const days=rentalDays(start,end);if(!days){alert('End date cannot be before start date');input.value='';sum.style.display='none';return;}const price=parseFloat(car.options[car.selectedIndex].dataset.price||'0'),completed=parseInt(cust.options[cust.selectedIndex].dataset.completed||'0',10),rate=completed>=loyaltyMinRentals?loyaltyDiscountRate:0,subtotal=price*days,discount=subtotal*rate,total=Math.max(0,subtotal-discount);input.value=total.toFixed(2);document.getElementById('summary_days').textContent=days;document.getElementById('summary_subtotal').textContent=subtotal.toFixed(2)+' TRY';document.getElementById('summary_discount').textContent=discount.toFixed(2)+' TRY';document.getElementById('summary_total').textContent=total.toFixed(2)+' TRY';sum.style.display='block';}
+function updateCost(){const car=document.getElementById('car_id'),cust=document.getElementById('customer_id'),start=document.getElementById('start_date').value,end=document.getElementById('end_date').value,input=document.getElementById('total_cost'),sum=document.getElementById('pricing_summary');if(!car.value||!cust.value||!start||!end){input.value='';sum.style.display='none';return;}const days=rentalDays(start,end);if(!days){alert('End date cannot be before start date');input.value='';sum.style.display='none';return;}const price=parseFloat(car.options[car.selectedIndex].dataset.price||'0'),completed=parseInt(cust.options[cust.selectedIndex].dataset.completed||'0',10),rate=completed>=loyaltyMinRentals?loyaltyDiscountRate:0,subtotal=price*days,discount=subtotal*rate,total=Math.max(0,subtotal-discount);input.value=total.toFixed(2);document.getElementById('summary_days').textContent=days;document.getElementById('summary_subtotal').textContent=fmtMoney(subtotal);document.getElementById('summary_discount').textContent=fmtMoney(discount);document.getElementById('summary_total').textContent=fmtMoney(total);sum.style.display='block';}
 </script>
 </body>

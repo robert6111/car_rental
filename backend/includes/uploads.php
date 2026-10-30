@@ -21,7 +21,7 @@ function cr_allowed_upload_types(): array {
  * Stores an uploaded file from $_FILES. Returns ['path','original_name','mime'] on success
  * or ['error' => message] on failure. 'path' is relative to the storage folder.
  */
-function cr_store_upload(array $file, string $folder): array {
+function cr_store_upload(array $file, string $folder, ?array $onlyMimes = null): array {
     $err = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
     if ($err === UPLOAD_ERR_INI_SIZE || $err === UPLOAD_ERR_FORM_SIZE) return ['error' => 'The file is too large (maximum 10 MB).'];
     if ($err !== UPLOAD_ERR_OK) return ['error' => 'File upload failed. Please try again.'];
@@ -30,7 +30,8 @@ function cr_store_upload(array $file, string $folder): array {
 
     $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']) ?: '';
     $allowed = cr_allowed_upload_types();
-    if (!isset($allowed[$mime])) return ['error' => 'Only PDF, JPG, PNG or WEBP files are allowed.'];
+    if ($onlyMimes !== null) $allowed = array_intersect_key($allowed, array_flip($onlyMimes));
+    if (!isset($allowed[$mime])) return ['error' => 'Only ' . strtoupper(implode(', ', array_unique(array_values($allowed)))) . ' files are allowed.'];
 
     $folder = preg_replace('/[^a-z0-9_-]/i', '', $folder);
     $relative = $folder . '/' . date('Y/m');

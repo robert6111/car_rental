@@ -28,9 +28,9 @@ $result = $conn->query("
             <?php if($result && $result->num_rows > 0): while($rental = $result->fetch_assoc()): ?>
             <tr>
                 <td><?= h($rental['rental_id']); ?></td>
-                <td><?= number_format((float)$rental['total_cost'], 2); ?> TRY</td>
-                <td><?= number_format((float)$rental['total_paid'], 2); ?> TRY</td>
-                <td><?= number_format((float)$rental['remaining'], 2); ?> TRY</td>
+                <td><?= money((float)$rental['total_cost']); ?></td>
+                <td><?= money((float)$rental['total_paid']); ?></td>
+                <td><?= money((float)$rental['remaining']); ?></td>
                 <td><?= h(ucfirst($rental['status'])); ?></td>
             </tr>
             <?php endwhile; else: ?><tr><td colspan="5">No payments found.</td></tr><?php endif; ?>

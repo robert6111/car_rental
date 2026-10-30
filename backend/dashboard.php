@@ -1,7 +1,4 @@
 <?php
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-error_reporting(0);
 
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/db.php';
@@ -311,6 +308,14 @@ $recentRentals = $conn->query("
     <div class="content">
         <div class="container-fluid">
 
+            <?php if (stock_has_permission('settings_manage') && cr_setting('settings_reviewed') !== '1'): ?>
+                <div style="background:#fff7ed;border:1px solid #fdba74;color:#9a3412;padding:12px 16px;border-radius:10px;margin-bottom:16px;">
+                    <strong>Finish setting up your system.</strong> Check the business name, currency, timezone and phone code in
+                    <a href="<?= h(app_url('settings/index.php')); ?>" style="color:#9a3412;text-decoration:underline;">Settings</a>.
+                    This message disappears after you save them.
+                </div>
+            <?php endif; ?>
+
             <div class="dashboard-head">
                 <div>
                     <h1>Dashboard</h1>
@@ -456,11 +461,11 @@ $recentRentals = $conn->query("
                                             </span>
                                         </td>
 
-                                        <td><?= h($rental['start_date']); ?></td>
+                                        <td><?= h(cr_date($rental['start_date'])) ?></td>
 
-                                        <td><?= h($rental['end_date']); ?></td>
+                                        <td><?= h(cr_date($rental['end_date'])) ?></td>
 
-                                        <td><?= number_format((float)$rental['total_cost'], 2); ?> TRY</td>
+                                        <td><?= money((float)$rental['total_cost']); ?></td>
 
                                         <td>
                                             <span class="status-badge <?= h($statusClass); ?>">

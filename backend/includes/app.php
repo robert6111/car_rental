@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/security.php';
+require_once __DIR__ . '/settings.php';
 
 function app_base_url(): string {
     $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
@@ -44,9 +45,20 @@ function is_admin_user(): bool {
 
 
 // Customer-ready business helpers
-if (!defined('LOYALTY_DISCOUNT_MIN_RENTALS')) define('LOYALTY_DISCOUNT_MIN_RENTALS', 3);
-if (!defined('LOYALTY_DISCOUNT_RATE')) define('LOYALTY_DISCOUNT_RATE', 0.10); // 10% after 3 completed rentals
-if (!defined('LATE_PAYMENT_DAILY_RATE')) define('LATE_PAYMENT_DAILY_RATE', 0.01); // 1% per day after due date
+// Rental rules come from Settings (admin can change them).
+function loyalty_min_rentals(): int {
+    return max(1, (int)cr_setting('loyalty_min_rentals'));
+}
+
+/** Loyalty discount as a fraction (0.10 = 10%). 0 when loyalty discounts are switched off. */
+function loyalty_discount_fraction(): float {
+    return cr_setting_bool('loyalty_enabled') ? max(0.0, (float)cr_setting('loyalty_discount_percent') / 100) : 0.0;
+}
+
+/** Late-payment interest per day as a fraction (0.01 = 1%). 0 when switched off. */
+function late_interest_daily_fraction(): float {
+    return cr_setting_bool('late_interest_enabled') ? max(0.0, (float)cr_setting('late_interest_daily_rate') / 100) : 0.0;
+}
 
 function rental_day_count(string $startDate, string $endDate): int {
     try { $start = new DateTimeImmutable($startDate); $end = new DateTimeImmutable($endDate); }
@@ -73,7 +85,7 @@ function customer_completed_rental_count(mysqli $conn, int $customerId, int $exc
 }
 
 function loyalty_discount_rate(int $completedRentals): float {
-    return $completedRentals >= (int)LOYALTY_DISCOUNT_MIN_RENTALS ? (float)LOYALTY_DISCOUNT_RATE : 0.0;
+    return $completedRentals >= loyalty_min_rentals() ? loyalty_discount_fraction() : 0.0;
 }
 
 function calculate_rental_total(mysqli $conn, int $customerId, int $carId, string $startDate, string $endDate, int $excludeRentalId = 0): array {
@@ -120,7 +132,7 @@ function overdue_same_day_completion_needed(?string $status, ?string $startDate,
 function rental_bill_summary(float $rentalTotal, float $totalPaid, ?string $endDate): array {
     $baseRemaining = max($rentalTotal - $totalPaid, 0);
     $lateDays = $baseRemaining > 0 ? date_days_after_today($endDate) : 0;
-    $lateInterest = round($baseRemaining * (float)LATE_PAYMENT_DAILY_RATE * $lateDays, 2);
+    $lateInterest = round($baseRemaining * late_interest_daily_fraction() * $lateDays, 2);
     $grandTotal = round($rentalTotal + $lateInterest, 2);
     $remaining = max(round($grandTotal - $totalPaid, 2), 0);
     return ['base_remaining'=>round($baseRemaining,2),'late_days'=>$lateDays,'late_interest'=>$lateInterest,'grand_total'=>$grandTotal,'remaining'=>$remaining,'status'=>$remaining<=0?'Paid':'In Debt'];

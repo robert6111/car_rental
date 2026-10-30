@@ -31,11 +31,16 @@ if (!function_exists('cr_db')) {
         }
 
         $conn->set_charset('utf8mb4');
-        // Keep MySQL's clock (NOW(), CURDATE()) in line with PHP's timezone.
-        $conn->query("SET time_zone = '" . (new DateTime())->format('P') . "'");
 
+        require_once __DIR__ . '/settings.php';
         require_once __DIR__ . '/schema.php';
-        ensure_full_car_rental_schema($conn);
+        cr_settings_load($conn);
+        cr_migrate_if_needed($conn); // runs only after an upgrade, not on every page
+
+        // Business timezone from Settings (falls back to config). MySQL uses the same clock.
+        $tz = cr_setting('timezone');
+        if ($tz === '' || !@date_default_timezone_set($tz)) date_default_timezone_set((string)cr_config('app.timezone', 'UTC') ?: 'UTC');
+        $conn->query("SET time_zone = '" . (new DateTime())->format('P') . "'");
         return $conn;
     }
 }

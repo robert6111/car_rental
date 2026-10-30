@@ -31,6 +31,6 @@ $result = $conn->query("SELECT p.id, p.payment_date, p.amount, r.id AS rental_id
 </form>
 <div class="table-responsive"><table class="table" border="1" cellpadding="10"><tr><th>#</th><th>Date</th><th>Customer</th><th>Car</th><th>Reg No</th><th>Rental</th><th>Amount</th></tr>
 <?php if($result && $result->num_rows): $i=1; $total=0; while($row=$result->fetch_assoc()): $total += (float)$row['amount']; $carName = trim(($row['make_name'] ?? '') . ' ' . ($row['model_name'] ?? '') . ' ' . ($row['car_year'] ?? '')); ?>
-<tr><td><?= $i++; ?></td><td><?= h($row['payment_date']); ?></td><td><?= h($row['full_name']); ?></td><td><?= h($carName !== '' ? $carName : $row['reg_no']); ?></td><td><?= h($row['reg_no']); ?></td><td>#<?= h($row['rental_id']); ?></td><td><?= number_format((float)$row['amount'],2); ?> TRY</td></tr>
-<?php endwhile; ?><tr><th colspan="6">Total</th><th><?= number_format($total,2); ?> TRY</th></tr><?php else: ?><tr><td colspan="7">No payment records found.</td></tr><?php endif; ?>
+<tr><td><?= $i++; ?></td><td><?= h(cr_date($row['payment_date'])) ?></td><td><?= h($row['full_name']); ?></td><td><?= h($carName !== '' ? $carName : $row['reg_no']); ?></td><td><?= h($row['reg_no']); ?></td><td>#<?= h($row['rental_id']); ?></td><td><?= money((float)$row['amount']); ?></td></tr>
+<?php endwhile; ?><tr><th colspan="6">Total</th><th><?= money($total); ?></th></tr><?php else: ?><tr><td colspan="7">No payment records found.</td></tr><?php endif; ?>
 </table></div></div></div></body></html>

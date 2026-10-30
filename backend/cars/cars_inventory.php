@@ -1,7 +1,5 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
-error_reporting(0);
-ini_set('display_errors', 0);
 require __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/rental_status.php';
 sync_rental_and_car_status($conn);
@@ -94,7 +92,7 @@ include __DIR__ . '/../includes/leftsidebar.php';
                 <td><?= htmlentities($row['model']) ?></td>
                 <td><?= htmlentities($row['car_year']) ?></td>
                 <td><?= htmlentities($row['availability_status']) ?></td>
-                <td><?= htmlentities($row['price_per_day']) ?> TRY</td> <!-- Display price per day -->
+                <td><?= money($row['price_per_day']) ?></td> <!-- Display price per day -->
                 <td>
                     <a href="edit.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-warning">Edit</a> <br><br>
                     <a href="<?= h(stock_action_url('cars_inventory.php?action=del&car_id=' . (int)$row['id'])); ?>"

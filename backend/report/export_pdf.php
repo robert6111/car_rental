@@ -1,7 +1,4 @@
 <?php
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-error_reporting(0);
 require_once __DIR__ . '/../includes/admin_only.php';
 require __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/rental_status.php';
@@ -35,7 +32,7 @@ $pdf->AddPage();
 $pdf->reportTitle('Rental Report', ['Status' => $status_filter ?: 'All', 'From' => $from_date, 'To' => $to_date, 'Reg No' => $reg_no]);
 
 $w = [8, 34, 36, 25, 20, 20, 24, 23];
-$headers = ['#','Customer','Car','Reg No','Start','End','Cost','Status'];
+$headers = ['#','Customer','Car','Reg No','Start','End','Cost (' . $pdf->safeText(cr_setting('currency_code'), 5) . ')','Status'];
 $drawHeader = function() use ($pdf, $w, $headers) {
     $pdf->SetFont('Arial','B',8);
     $pdf->SetFillColor(44, 62, 80);
@@ -58,15 +55,15 @@ if ($result && $result->num_rows > 0) {
         $pdf->Cell($w[1],6,$pdf->safeText($row['customer_name'], 24),1);
         $pdf->Cell($w[2],6,$pdf->safeText($carName, 24),1);
         $pdf->Cell($w[3],6,$pdf->safeText($row['car_reg'], 15),1);
-        $pdf->Cell($w[4],6,$row['start_date'],1);
-        $pdf->Cell($w[5],6,$row['end_date'],1);
-        $pdf->Cell($w[6],6,number_format((float)$row['total_cost'],2),1,0,'R');
+        $pdf->Cell($w[4],6,cr_date($row['start_date']),1);
+        $pdf->Cell($w[5],6,cr_date($row['end_date']),1);
+        $pdf->Cell($w[6],6,cr_number($row['total_cost']),1,0,'R');
         $pdf->Cell($w[7],6,$pdf->safeText($row['rental_status'], 10),1,1);
     }
     if ($pdf->GetY() > 260) { $pdf->AddPage(); $drawHeader(); }
     $pdf->SetFont('Arial','B',8);
     $pdf->Cell(array_sum(array_slice($w,0,6)),7,'Total',1,0,'R');
-    $pdf->Cell($w[6],7,number_format($total,2),1,0,'R');
+    $pdf->Cell($w[6],7,$pdf->safeText(money_text($total), 30),1,0,'R');
     $pdf->Cell($w[7],7,'',1,1);
 } else {
     $pdf->Cell(array_sum($w),7,'No rentals found.',1,1,'C');

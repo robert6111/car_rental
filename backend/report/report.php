@@ -37,6 +37,6 @@ $result = $conn->query("SELECT r.id, r.start_date, r.end_date, r.total_cost, r.s
 </form>
 <div class="table-responsive"><table class="table" border="1" cellpadding="10"><tr><th>#</th><th>Customer</th><th>Car</th><th>Reg No</th><th>Start</th><th>End</th><th>Cost</th><th>Status</th></tr>
 <?php if($result && $result->num_rows): $i=1; $total=0; while($row=$result->fetch_assoc()): $total += (float)$row['total_cost']; $carName = trim(($row['make_name'] ?? '') . ' ' . ($row['model_name'] ?? '') . ' ' . ($row['car_year'] ?? '')); ?>
-<tr><td><?= $i++; ?></td><td><?= h($row['full_name']); ?></td><td><?= h($carName !== '' ? $carName : $row['reg_no']); ?></td><td><?= h($row['reg_no']); ?></td><td><?= h($row['start_date']); ?></td><td><?= h($row['end_date']); ?></td><td><?= number_format((float)$row['total_cost'],2); ?> TRY</td><td><?= h($row['status']); ?></td></tr>
-<?php endwhile; ?><tr><th colspan="6">Total</th><th><?= number_format($total,2); ?> TRY</th><th></th></tr><?php else: ?><tr><td colspan="8">No rentals found.</td></tr><?php endif; ?>
+<tr><td><?= $i++; ?></td><td><?= h($row['full_name']); ?></td><td><?= h($carName !== '' ? $carName : $row['reg_no']); ?></td><td><?= h($row['reg_no']); ?></td><td><?= h(cr_date($row['start_date'])) ?></td><td><?= h(cr_date($row['end_date'])) ?></td><td><?= money((float)$row['total_cost']); ?></td><td><?= h($row['status']); ?></td></tr>
+<?php endwhile; ?><tr><th colspan="6">Total</th><th><?= money($total); ?></th><th></th></tr><?php else: ?><tr><td colspan="8">No rentals found.</td></tr><?php endif; ?>
 </table></div></div></div></body></html>

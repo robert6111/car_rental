@@ -93,7 +93,7 @@ $result = $conn->query("SELECT c.*, COUNT(r.id) AS completed_rentals FROM custom
                             <td><?= htmlentities($row['license_no']) ?></td>
                             <td><?= h(trim(($row['id_number'] ?? '') . ' ' . ($row['passport_no'] ?? ''))) ?></td>
                             <td>License: <?= h($row['license_expiry'] ?? '') ?><br>Passport: <?= h($row['passport_expiry'] ?? '') ?></td>
-                            <td><?= ((int)$row['completed_rentals'] >= LOYALTY_DISCOUNT_MIN_RENTALS) ? 'Loyal customer (' . ((float)LOYALTY_DISCOUNT_RATE * 100) . '% discount)' : htmlentities($row['completed_rentals'] . ' completed rentals') ?></td>
+                            <td><?= (loyalty_discount_fraction() > 0 && (int)$row['completed_rentals'] >= loyalty_min_rentals()) ? 'Loyal customer (' . h(loyalty_discount_fraction() * 100) . '% discount)' : htmlentities($row['completed_rentals'] . ' completed rentals') ?></td>
                             <td>
                                 <a href="edit.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-warning">Edit</a>
                                 <a href="<?= h(stock_action_url('customer.php?action=del&customer_id=' . (int)$row['id'])); ?>"

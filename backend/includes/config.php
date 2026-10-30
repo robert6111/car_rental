@@ -74,6 +74,20 @@ if (!function_exists('cr_config')) {
     ini_set('error_log', cr_storage_path('logs') . '/php-error.log');
     error_reporting(E_ALL);
 
+    // Unexpected errors: log the details, show visitors a friendly page (details only in debug mode).
+    set_exception_handler(function (Throwable $e) {
+        error_log('Uncaught ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine() . "\n" . $e->getTraceAsString());
+        if (PHP_SAPI === 'cli') { fwrite(STDERR, $e->getMessage() . PHP_EOL); exit(1); }
+        while (ob_get_level() > 0) ob_end_clean();
+        if (!headers_sent()) http_response_code(500);
+        $detail = cr_is_debug() ? '<pre style="white-space:pre-wrap;background:#f3f4f6;padding:12px;border-radius:8px;">' . htmlspecialchars($e->getMessage() . "\n" . $e->getFile() . ':' . $e->getLine(), ENT_QUOTES, 'UTF-8') . '</pre>' : '';
+        echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Something went wrong</title></head>'
+            . '<body style="font-family:system-ui,Arial;padding:30px;max-width:720px;margin:auto;"><h2 style="color:#991b1b;">Something went wrong</h2>'
+            . '<p>The action could not be completed. Please go back and try again. If the problem continues, contact your administrator.</p>' . $detail
+            . '<p><a href="javascript:history.back()">&larr; Go back</a></p></body></html>';
+        exit;
+    });
+
     $tz = (string)cr_config('app.timezone', 'UTC');
     if (!@date_default_timezone_set($tz)) date_default_timezone_set('UTC');
 }

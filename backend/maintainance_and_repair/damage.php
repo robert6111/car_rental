@@ -1,6 +1,5 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
-error_reporting(0); ini_set('display_errors', 0);
 require __DIR__ . '/../includes/db.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {

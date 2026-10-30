@@ -83,7 +83,7 @@ if (isset($_GET['error']) && $_GET['error'] === 'has_rentals') $error = 'This ca
         <td><?= h($row['insurance_expiry'] ?? '') ?></td>
         <td><?= h($row['inspection_expiry'] ?? '') ?></td>
         <td><?= h($row['branch'] ?? '') ?></td>
-        <td><?= number_format((float)($row['price_per_day'] ?? 0),2) ?> TRY</td>
+        <td><?= money((float)($row['price_per_day'] ?? 0)) ?></td>
 
         <td>
             <a href="edit.php?id=<?= $row['id'] ?>">Edit</a> |

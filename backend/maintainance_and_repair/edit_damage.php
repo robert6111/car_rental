@@ -7,8 +7,6 @@ require_once __DIR__ . '/../includes/auth.php';
 // ==============================
 ?>
 <?php
-error_reporting(0);
-ini_set('display_errors', 0);
 
 
 include __DIR__ . '/../includes/db.php';

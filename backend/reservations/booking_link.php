@@ -2,105 +2,30 @@
 require_once __DIR__ . '/../includes/auth.php';
 require __DIR__ . '/../includes/db.php';
 
-function car_booking_is_local_host(string $host): bool {
-    $host = strtolower(trim($host, "[] \t\n\r\0\x0B"));
-    return in_array($host, ['localhost', '127.0.0.1', '::1', '0.0.0.0'], true);
-}
-
-function car_booking_valid_lan_ipv4(string $ip): bool {
-    if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) return false;
-    return !str_starts_with($ip, '127.') && !str_starts_with($ip, '169.254.');
-}
-
-function car_booking_detect_lan_ipv4(): string {
-    $candidates = [];
-    foreach ([$_SERVER['SERVER_ADDR'] ?? '', gethostbyname(gethostname() ?: '')] as $ip) {
-        if (is_string($ip) && car_booking_valid_lan_ipv4($ip)) $candidates[] = $ip;
-    }
-    if (PHP_OS_FAMILY === 'Windows') {
-        $out = (string) @shell_exec('ipconfig');
-        if ($out && preg_match_all('/IPv4[^:\r\n]*:\s*([0-9]{1,3}(?:\.[0-9]{1,3}){3})/i', $out, $matches)) {
-            foreach ($matches[1] as $ip) if (car_booking_valid_lan_ipv4($ip)) $candidates[] = $ip;
-        }
-    } else {
-        $out = (string) @shell_exec('hostname -I 2>/dev/null');
-        foreach (preg_split('/\s+/', trim($out)) as $ip) if (car_booking_valid_lan_ipv4($ip)) $candidates[] = $ip;
-    }
-    foreach ($candidates as $ip) {
-        if (preg_match('/^(10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.)/', $ip)) return $ip;
-    }
-    return $candidates[0] ?? 'localhost';
-}
-
-function car_booking_quick_get(string $url, int $timeoutMs = 700): string {
-    if (function_exists('curl_init')) {
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CONNECTTIMEOUT_MS => min($timeoutMs, 400),
-            CURLOPT_TIMEOUT_MS => $timeoutMs,
-            CURLOPT_FOLLOWLOCATION => false,
-        ]);
-        $body = (string) curl_exec($ch);
-        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        return ($code >= 200 && $code < 300) ? $body : '';
-    }
-    $ctx = stream_context_create(['http' => ['timeout' => max(1, $timeoutMs / 1000), 'ignore_errors' => true]]);
-    $body = @file_get_contents($url, false, $ctx);
-    return is_string($body) ? $body : '';
-}
-
-function car_booking_detect_ngrok_url(): string {
-    foreach (['http://127.0.0.1:4040/api/tunnels', 'http://localhost:4040/api/tunnels'] as $endpoint) {
-        $raw = car_booking_quick_get($endpoint);
-        if ($raw === '') continue;
-        $data = json_decode($raw, true);
-        if (!is_array($data) || empty($data['tunnels']) || !is_array($data['tunnels'])) continue;
-        $fallback = '';
-        foreach ($data['tunnels'] as $tunnel) {
-            $public = (string) ($tunnel['public_url'] ?? '');
-            if (!preg_match('~^https?://~i', $public)) continue;
-            if (str_starts_with(strtolower($public), 'https://')) return rtrim($public, '/');
-            if ($fallback === '') $fallback = rtrim($public, '/');
-        }
-        if ($fallback !== '') return $fallback;
-    }
-    return '';
-}
-
+/**
+ * Public address of the online booking form. Uses the System address from Settings when set;
+ * otherwise falls back to this server's own network address (works inside the office network only).
+ */
 function car_booking_public_link(): array {
-    $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/backend/reservations/booking_link.php'));
-    $bookingPath = rtrim($scriptDir, '/') . '/online_booking.php';
-    if (!str_starts_with($bookingPath, '/')) $bookingPath = '/' . $bookingPath;
+    $configured = cr_absolute_url('reservations/online_booking.php', true);
+    if ($configured !== null) return ['url' => $configured, 'source' => 'configured'];
 
-    $ngrok = car_booking_detect_ngrok_url();
-    if ($ngrok !== '') {
-        return ['url' => $ngrok . $bookingPath, 'source' => 'ngrok', 'ngrok' => $ngrok];
+    $url = cr_absolute_url('reservations/online_booking.php');
+    $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+    if (in_array($host, ['localhost', '127.0.0.1', '[::1]', '::1'], true)) {
+        $ip = (string) ($_SERVER['SERVER_ADDR'] ?? '');
+        if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) || str_starts_with($ip, '127.')) {
+            $ip = gethostbyname(gethostname() ?: 'localhost');
+        }
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) && !str_starts_with($ip, '127.')) {
+            $url = preg_replace('#//(localhost|127\.0\.0\.1|\[::1\])#i', '//' . $ip, $url, 1);
+        }
     }
-
-    $scheme = stock_is_https() ? 'https' : 'http';
-    $hostHeader = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
-    $hostOnly = $hostHeader;
-    $port = '';
-    if (str_contains($hostHeader, ':') && !str_starts_with($hostHeader, '[')) {
-        [$hostOnly, $portPart] = explode(':', $hostHeader, 2);
-        $port = $portPart !== '' ? ':' . $portPart : '';
-    }
-    if (car_booking_is_local_host($hostOnly)) {
-        $hostOnly = car_booking_detect_lan_ipv4();
-        return ['url' => $scheme . '://' . $hostOnly . $port . $bookingPath, 'source' => 'local', 'ngrok' => ''];
-    }
-    return ['url' => $scheme . '://' . $hostHeader . $bookingPath, 'source' => 'hosted', 'ngrok' => ''];
+    return ['url' => $url, 'source' => 'local'];
 }
 
 function car_booking_whatsapp_number(string $phone): string {
-    $digits = preg_replace('/\D+/', '', $phone);
-    if ($digits === '') return '';
-    if (str_starts_with($digits, '00')) $digits = substr($digits, 2);
-    if (str_starts_with($digits, '0')) $digits = '255' . substr($digits, 1);
-    if (strlen($digits) === 9) $digits = '255' . $digits;
-    return $digits;
+    return cr_phone_international($phone);
 }
 
 function car_booking_message(string $customerName, string $link): string {
@@ -158,13 +83,8 @@ $prefillPhone = trim((string) ($_POST['phone'] ?? ''));
     <div class="card-box" style="border-left:7px solid #16a34a;">
         <h3>Send Booking Page to Customer WhatsApp</h3>
         <p>Select an existing customer or enter a WhatsApp number. The button opens WhatsApp with the customer number and booking message already filled.</p>
-
-        <?php if ($linkInfo['source'] === 'ngrok'): ?>
-            <p class="success-msg"><strong>Ngrok detected automatically:</strong> <?= h($linkInfo['ngrok']); ?>. The WhatsApp message will use this public booking link.</p>
-        <?php elseif ($linkInfo['source'] === 'local'): ?>
-            <p style="padding:10px 12px;border-radius:8px;background:#fff7ed;color:#9a3412;"><strong>Ngrok not detected.</strong> The link below uses the local network address. For customers outside this network, start Ngrok with <code>ngrok http 80</code> and refresh this page.</p>
-        <?php else: ?>
-            <p class="success-msg"><strong>Hosted booking link detected.</strong> The WhatsApp message will use the current website address.</p>
+        <?php if ($linkInfo['source'] === 'local'): ?>
+            <p style="padding:10px 12px;border-radius:8px;background:#fff7ed;color:#9a3412;"><strong>Local network link.</strong> This link only works for people on the same network as this computer. To send links to customers anywhere, put the system online and enter its address under <a href="<?= h(app_url('settings/index.php')); ?>">Settings &rsaquo; System address</a>.</p>
         <?php endif; ?>
 
         <form method="POST" target="_blank" id="whatsappSendForm">
@@ -187,7 +107,7 @@ $prefillPhone = trim((string) ($_POST['phone'] ?? ''));
                 </div>
                 <div>
                     <label>3. Customer WhatsApp Number</label>
-                    <input type="text" name="phone" id="customerPhone" placeholder="Example: 0712 345 678 or 255712345678" value="<?= h($prefillPhone); ?>">
+                    <input type="text" name="phone" id="customerPhone" placeholder="Local number or with country code" value="<?= h($prefillPhone); ?>">
                 </div>
                 <div style="grid-column:1/-1;">
                     <label>4. Message Preview</label>

@@ -4,8 +4,6 @@ require __DIR__ . '/../includes/db.php';
 
 $msg = $error = '';
 if (isset($_GET['added'])) $msg = 'Make added successfully.';
-error_reporting(0);
-ini_set('display_errors', 0);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $make = trim($_POST['make_name']);

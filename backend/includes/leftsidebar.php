@@ -35,7 +35,7 @@ $role_id = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
                         <li><a href="<?= h(app_url('tasks/manage.php')); ?>">Staff Tasks</a></li>
                         <li><a href="<?= h(app_url('attendance/manage.php')); ?>">Attendance</a></li>
                         <li><a href="<?= h(app_url('notifications/alerts.php')); ?>">Notifications & Alerts</a></li>
-                        <li><a href="<?= h(app_url('rentals/not_returned.php')); ?>">Not Returned / KABIS Cases</a></li>
+                        <li><a href="<?= h(app_url('rentals/not_returned.php')); ?>"><?= h(cr_not_returned_title()); ?></a></li>
                     </ul>
                 </li>
                 <?php endif; ?>
@@ -147,6 +147,12 @@ $role_id = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
                     <li class="has_sub">
                         <a href="<?= h(app_url('import/import.php')); ?>" class="waves-effect">
                             <i class="mdi mdi-file-import"></i> <span> Import Data </span>
+                        </a>
+                    </li>
+
+                    <li class="has_sub">
+                        <a href="<?= h(app_url('settings/index.php')); ?>" class="waves-effect">
+                            <i class="mdi mdi-cog"></i> <span> Settings </span>
                         </a>
                     </li>
 

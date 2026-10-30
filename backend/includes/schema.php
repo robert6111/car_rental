@@ -1,4 +1,55 @@
 <?php
+/*
+ * Database upgrades. The stored schema_version (settings table) tells which upgrades
+ * already ran, so on a normal page load this costs nothing. Raise CR_SCHEMA_VERSION and
+ * add a block in cr_run_migrations() whenever the database structure changes.
+ */
+if (!defined('CR_SCHEMA_VERSION')) define('CR_SCHEMA_VERSION', 2);
+
+function cr_migrate_if_needed(mysqli $conn): void {
+    $current = (int)($GLOBALS['__cr_settings']['schema_version'] ?? 0);
+    if ($current >= CR_SCHEMA_VERSION) return;
+
+    // Only one request runs the upgrade; others wait for it to finish.
+    $conn->query("SELECT GET_LOCK('car_rental_migrate', 60)");
+    try {
+        $settingsExisted = cr_table_exists($conn, 'settings');
+        $current = (int)(cr_settings_load($conn, true)['schema_version'] ?? 0);
+        if ($current < CR_SCHEMA_VERSION) {
+            cr_run_migrations($conn, $current, $settingsExisted);
+            cr_settings_save($conn, ['schema_version' => (string)CR_SCHEMA_VERSION]);
+        }
+    } catch (Throwable $e) {
+        error_log('Database upgrade failed: ' . $e->getMessage());
+    } finally {
+        $conn->query("SELECT RELEASE_LOCK('car_rental_migrate')");
+    }
+}
+
+function cr_run_migrations(mysqli $conn, int $from, bool $settingsExisted): void {
+    if ($from < 1) {
+        $conn->query("CREATE TABLE IF NOT EXISTS settings (
+            setting_key VARCHAR(100) NOT NULL PRIMARY KEY,
+            setting_value TEXT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        ensure_full_car_rental_schema($conn);
+    }
+
+    if ($from < 2 && !$settingsExisted) {
+        // Existing installations upgraded from the old version keep the values that used to be
+        // hardcoded (TRY prices, +255 phone numbers) until the admin reviews Settings.
+        $hasData = false;
+        $res = $conn->query('SELECT (SELECT COUNT(*) FROM rentals) + (SELECT COUNT(*) FROM cars) AS n');
+        if ($res) $hasData = (int)$res->fetch_assoc()['n'] > 0;
+        $seed = ['timezone' => (string)cr_config('app.timezone', 'UTC') ?: 'UTC', 'settings_reviewed' => '0'];
+        if ($hasData) {
+            $seed += ['currency_code' => 'TRY', 'currency_symbol' => 'TRY', 'currency_position' => 'after', 'phone_country_code' => '255'];
+        }
+        cr_settings_save($conn, $seed);
+    }
+}
+
 function cr_table_exists(mysqli $conn, string $table): bool {
     $safe = $conn->real_escape_string($table);
     $result = $conn->query("SHOW TABLES LIKE '$safe'");

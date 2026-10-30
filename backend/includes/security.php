@@ -53,11 +53,12 @@ function stock_security_app_url(string $path = ''): string {
 
 /**
  * Full URL (with scheme and host) for links that leave the browser, e.g. emails.
- * Uses app.url from config. When $requireConfigured is true and app.url is empty, returns null
+ * Uses the System address from Settings, then app.url from config. When $requireConfigured is true and app.url is empty, returns null
  * instead of trusting the visitor-controlled Host header.
  */
 function cr_absolute_url(string $path = '', bool $requireConfigured = false): ?string {
-    $configured = rtrim((string)cr_config('app.url', ''), '/');
+    $configured = function_exists('cr_setting') ? rtrim(cr_setting('app_url'), '/') : '';
+    if ($configured === '') $configured = rtrim((string)cr_config('app.url', ''), '/');
     $path = ltrim($path, '/');
     if ($configured !== '') return $path === '' ? $configured : $configured . '/' . $path;
     if ($requireConfigured) return null;
@@ -255,6 +256,7 @@ function stock_public_paths(): array {
         '/backend/authentication/reset_password.php',
         '/backend/authentication/register.php',
         '/backend/authentication/setup.php',
+        '/backend/settings/logo.php',
         '/backend/reservations/online_booking.php',
     ];
 }

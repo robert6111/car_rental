@@ -2,19 +2,8 @@
 require_once __DIR__ . '/../includes/app.php';
 require __DIR__ . '/../includes/db.php';
 
-function car_public_phone_digits(string $phone): string {
-    $digits = preg_replace('/\D+/', '', $phone);
-    if (str_starts_with($digits, '00')) $digits = substr($digits, 2);
-    return $digits;
-}
-
 function car_public_phone_candidates(string $phone): array {
-    $digits = car_public_phone_digits($phone);
-    if ($digits === '') return [];
-    $candidates = [$digits];
-    if (str_starts_with($digits, '0') && strlen($digits) >= 9) $candidates[] = '255' . substr($digits, 1);
-    if (str_starts_with($digits, '255') && strlen($digits) > 3) $candidates[] = '0' . substr($digits, 3);
-    return array_values(array_unique($candidates));
+    return cr_phone_variants($phone);
 }
 
 function car_public_existing_customer_id(mysqli $conn, string $phone, string $email): int {
@@ -154,7 +143,7 @@ $cars = $conn->query("SELECT cars.id, cars.reg_no, cars.price_per_day, makes.nam
                 <select name="car_id" required>
                     <option value="">Select car</option>
                     <?php while ($c = $cars->fetch_assoc()): ?>
-                        <option value="<?= h($c['id']); ?>" <?= (string)($_POST['car_id'] ?? '') === (string)$c['id'] ? 'selected' : ''; ?>><?= h(car_display_name($c) . ' - ' . number_format((float)$c['price_per_day'], 2) . ' TRY/day'); ?></option>
+                        <option value="<?= h($c['id']); ?>" <?= (string)($_POST['car_id'] ?? '') === (string)$c['id'] ? 'selected' : ''; ?>><?= h(car_display_name($c) . ' - ' . money_text((float)$c['price_per_day']) . '/day'); ?></option>
                     <?php endwhile; ?>
                 </select>
             </div>
