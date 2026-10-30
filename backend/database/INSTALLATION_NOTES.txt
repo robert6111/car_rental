@@ -11,11 +11,42 @@ CAR RENTAL - INSTALLATION
 5. Open the address in a browser (e.g. http://localhost/car_rental/).
    The first visit opens "Create Admin Account": create the main administrator there.
 6. Log in and create the other staff accounts under Manage Users.
+7. Set up the scheduled task (below).
+
+Scheduled task (rental statuses, late interest, daily backup)
+The system updates rental statuses and late interest by itself while people use it, but the
+scheduled task makes sure it also happens overnight and that the daily backup is always made.
+Run it every hour.
+
+- Windows (XAMPP): open Task Scheduler > Create Basic Task
+    Name: Car Rental jobs
+    Trigger: Daily, then in the task's Properties > Triggers > Edit, tick
+             "Repeat task every: 1 hour" for a duration of "Indefinitely"
+    Action: Start a program
+    Program: C:\xampp\htdocs\car_rental\cron\run-scheduled.bat
+  In Properties > General choose "Run whether user is logged on or not".
+  If PHP is not in C:\xampp\php, edit the PHP= line in run-scheduled.bat.
+  Output is written to storage\logs\scheduled.log.
+
+- Linux hosting (cron):
+    0 * * * *  php /path/to/car_rental/cron/run.php >> /path/to/car_rental/storage/logs/scheduled.log 2>&1
+  (On cPanel: Cron Jobs > "Once Per Hour", with the same command.)
+
+- Check it works: Settings > "Lists and backups" shows when it last ran.
+  Until it runs, the daily backup is made when someone opens the dashboard.
+
+Backups
+- Automatic backups are kept for the number of days set in Settings (default 30).
+  Manual backups (Backup page) are kept until you delete them from storage/backups.
+- Copy backups to another computer, USB drive or cloud storage regularly. A backup that
+  lives only on the same computer is lost if that computer fails.
+- To restore: create an empty database and import the .sql file (phpMyAdmin > Import,
+  or: mysql -u USER -p DATABASE < backup.sql), then point config/config.php at it.
 
 Security notes
 - config/config.php contains passwords. Never share it.
 - Uploaded documents, backups and logs are kept in the storage/ folder, which is blocked
   from the web. On hosting, you can move it outside the public folder and set 'storage_path'.
 - On Apache, .htaccess files protect private folders (AllowOverride must be enabled).
-  On nginx/IIS, deny web access to: config/, storage/, vendor/, backend/includes/*.php, backend/database/.
+  On nginx/IIS, deny web access to: config/, storage/, vendor/, cron/, backend/includes/*.php, backend/database/.
 - Use HTTPS on any system reachable from the internet.

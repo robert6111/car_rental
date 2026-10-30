@@ -42,6 +42,20 @@ $from_date = $filters['from_date'];
 $to_date = $filters['to_date'];
 $reg_no = $filters['reg_no'];
 
+// Row count and the total (canceled excluded) cover the whole filtered set, not just the visible page.
+$stmt = $conn->prepare("SELECT COUNT(*) AS n, COUNT(CASE WHEN r.status <> 'Canceled' THEN 1 END) AS counted, IFNULL(SUM(CASE WHEN r.status <> 'Canceled' THEN r.total_cost ELSE 0 END),0) AS total
+    FROM rentals r
+    JOIN customers c ON r.customer_id = c.id
+    JOIN cars ca ON r.cars_id = ca.id
+    $where");
+if ($types !== '') $stmt->bind_param($types, ...$params);
+$stmt->execute();
+$sumRow = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+$total = (float)$sumRow['total'];
+$counted = (int)$sumRow['counted'];
+$pg = cr_page_total(cr_page(), (int)$sumRow['n']);
+
 $stmt = $conn->prepare("SELECT r.id, r.start_date, r.end_date, r.total_cost, r.status, r.returned_at, c.full_name, ca.reg_no, m.name AS make_name, mo.name AS model_name, y.year AS car_year
     FROM rentals r
     JOIN customers c ON r.customer_id = c.id
@@ -50,7 +64,7 @@ $stmt = $conn->prepare("SELECT r.id, r.start_date, r.end_date, r.total_cost, r.s
     LEFT JOIN models mo ON ca.model_id = mo.id
     LEFT JOIN car_years y ON ca.year_id = y.id
     $where
-    ORDER BY r.start_date DESC, r.id DESC");
+    ORDER BY r.start_date DESC, r.id DESC" . cr_page_sql($pg));
 if ($types !== '') $stmt->bind_param($types, ...$params);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -70,7 +84,7 @@ $today = cr_today();
 </form>
 <p style="color:#64748b;font-size:13px;">Rentals that overlap the chosen period are included. The total excludes canceled rentals.</p>
 <div class="table-responsive"><table class="table" border="1" cellpadding="10"><tr><th>#</th><th>Customer</th><th>Car</th><th>Reg No</th><th>Start</th><th>End</th><th>Cost</th><th>Status</th></tr>
-<?php if($result && $result->num_rows): $i=1; $total=0.0; $counted=0; while($row=$result->fetch_assoc()): if ($row['status'] !== 'Canceled') { $total += (float)$row['total_cost']; $counted++; } $carName = trim(($row['make_name'] ?? '') . ' ' . ($row['model_name'] ?? '') . ' ' . ($row['car_year'] ?? '')); $statusText = ($row['status'] === 'Completed' && $row['returned_at'] === null && $row['end_date'] < $today) ? 'Completed (not returned)' : $row['status']; ?>
+<?php if($result && $result->num_rows): $i=$pg['offset']+1; while($row=$result->fetch_assoc()): $carName = trim(($row['make_name'] ?? '') . ' ' . ($row['model_name'] ?? '') . ' ' . ($row['car_year'] ?? '')); $statusText = ($row['status'] === 'Completed' && $row['returned_at'] === null && $row['end_date'] < $today) ? 'Completed (not returned)' : $row['status']; ?>
 <tr><td><?= $i++; ?></td><td><?= h($row['full_name']); ?></td><td><?= h($carName !== '' ? $carName : $row['reg_no']); ?></td><td><?= h($row['reg_no']); ?></td><td><?= h(cr_date($row['start_date'])) ?></td><td><?= h(cr_date($row['end_date'])) ?></td><td><?= money((float)$row['total_cost']); ?></td><td><?= h($statusText); ?></td></tr>
 <?php endwhile; ?><tr><th colspan="6">Total (<?= (int)$counted; ?> rental<?= $counted === 1 ? '' : 's'; ?>, canceled excluded)</th><th><?= money($total); ?></th><th></th></tr><?php else: ?><tr><td colspan="8">No rentals found.</td></tr><?php endif; ?>
-</table></div></div></div></body></html>
+</table></div><?= cr_pagination($pg); ?></div></div></body></html>

@@ -4,7 +4,7 @@
  * already ran, so on a normal page load this costs nothing. Raise CR_SCHEMA_VERSION and
  * add a block in cr_run_migrations() whenever the database structure changes.
  */
-if (!defined('CR_SCHEMA_VERSION')) define('CR_SCHEMA_VERSION', 3);
+if (!defined('CR_SCHEMA_VERSION')) define('CR_SCHEMA_VERSION', 4);
 
 function cr_migrate_if_needed(mysqli $conn): void {
     $current = (int)($GLOBALS['__cr_settings']['schema_version'] ?? 0);
@@ -93,6 +93,18 @@ function cr_run_migrations(mysqli $conn, int $from, bool $settingsExisted): void
             }
             $upd->close();
         }
+    }
+
+    if ($from < 4) {
+        // Indexes for list pages, searches and the status sync.
+        cr_add_index_if_missing($conn, 'rentals', 'idx_rental_status_end', 'INDEX idx_rental_status_end (status, end_date)');
+        cr_add_index_if_missing($conn, 'rentals', 'idx_rental_car_returned', 'INDEX idx_rental_car_returned (cars_id, returned_at)');
+        cr_add_index_if_missing($conn, 'customers', 'idx_customer_name', 'INDEX idx_customer_name (full_name)');
+        cr_add_index_if_missing($conn, 'customers', 'idx_customer_phone', 'INDEX idx_customer_phone (phone_number)');
+        cr_add_index_if_missing($conn, 'customers', 'idx_customer_license', 'INDEX idx_customer_license (license_no)');
+        cr_add_index_if_missing($conn, 'customers', 'idx_customer_email', 'INDEX idx_customer_email (email)');
+        cr_add_index_if_missing($conn, 'cars', 'idx_car_status', 'INDEX idx_car_status (availability_status)');
+        cr_add_index_if_missing($conn, 'notifications', 'idx_notification_created', 'INDEX idx_notification_created (created_at)');
     }
 }
 

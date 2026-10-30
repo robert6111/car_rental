@@ -5,7 +5,7 @@ DirectoryIndex index.php
 <IfModule mod_rewrite.c>
     RewriteEngine On
     # Block private folders and files from the web
-    RewriteRule ^(config|storage|vendor|\.git)(/|$) - [F,L]
+    RewriteRule ^(config|storage|vendor|cron|\.git)(/|$) - [F,L]
     RewriteRule ^(composer\.(json|lock)|.*\.(md|txt|log|sql|lock))$ - [F,L]
 </IfModule>
 

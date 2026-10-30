@@ -1,10 +1,7 @@
-CREATE DATABASE IF NOT EXISTS car_rental CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-DROP USER IF EXISTS 'car_rental_admin'@'localhost';
-CREATE USER 'car_rental_admin'@'localhost' IDENTIFIED BY 'car_rental_admin';
-GRANT ALL PRIVILEGES ON car_rental.* TO 'car_rental_admin'@'localhost';
-FLUSH PRIVILEGES;
-
-USE car_rental;
+-- Car Rental - fresh installation.
+-- Create an empty database and a database user first (see INSTALLATION_NOTES.txt),
+-- then import this file INTO that database. It does not create users or pick a database itself.
+SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS=0;
 
 -- DROP TABLE IF EXISTS expenses;
@@ -384,4 +381,14 @@ CREATE TABLE rental_charges (
   KEY idx_charge_rental (rental_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-INSERT INTO settings (setting_key, setting_value) VALUES ('schema_version', '3');
+-- Indexes for list pages and searches
+ALTER TABLE rentals ADD INDEX idx_rental_status_end (status, end_date);
+ALTER TABLE rentals ADD INDEX idx_rental_car_returned (cars_id, returned_at);
+ALTER TABLE customers ADD INDEX idx_customer_name (full_name);
+ALTER TABLE customers ADD INDEX idx_customer_phone (phone_number);
+ALTER TABLE customers ADD INDEX idx_customer_license (license_no);
+ALTER TABLE customers ADD INDEX idx_customer_email (email);
+ALTER TABLE cars ADD INDEX idx_car_status (availability_status);
+ALTER TABLE notifications ADD INDEX idx_notification_created (created_at);
+
+INSERT INTO settings (setting_key, setting_value) VALUES ('schema_version', '4');

@@ -33,19 +33,36 @@ function cr_rental_initial_status(string $startDate): string {
 /* Status sync                                                         */
 /* ------------------------------------------------------------------ */
 
-function sync_rental_and_car_status(mysqli $conn): void {
+/**
+ * Date-based status changes.
+ * The two rental updates are cheap (indexed, usually change nothing) and run on every page.
+ * The full car-status pass and interest run when a rental changed status, when the date
+ * changed, every few minutes as a safety net, and always from the scheduled task.
+ * Pages that change a rental also update that car straight away (cr_sync_car_statuses).
+ */
+function sync_rental_and_car_status(mysqli $conn, bool $force = false): void {
     static $done = false;
-    if ($done) return;
+    if ($done && !$force) return;
     $done = true;
 
     // Pending rentals start on their start date.
     $conn->query("UPDATE rentals SET status = 'Active' WHERE status = 'Pending' AND start_date <= CURDATE()");
+    $changed = $conn->affected_rows > 0;
 
     // Rentals finish automatically after their end date. The car is NOT released here.
     $conn->query("UPDATE rentals SET status = 'Completed', completed_at = COALESCE(completed_at, NOW()) WHERE status = 'Active' AND end_date < CURDATE()");
+    $newlyOverdue = $conn->affected_rows > 0;
+    $changed = $changed || $newlyOverdue;
+
+    $last = (int)cr_setting('status_synced_at');
+    $fresh = $last > time() - 300 && date('Y-m-d', $last) === cr_today();
+    if (!$force && !$changed && $fresh) return;
 
     cr_sync_car_statuses($conn);
     cr_accrue_late_interest_daily($conn);
+    // Rentals that just became overdue get their interest now, not tomorrow (safe to repeat).
+    if ($newlyOverdue) cr_accrue_late_interest($conn);
+    cr_settings_save($conn, ['status_synced_at' => (string)time()]);
 }
 
 /** Recalculates each car's current status. Cars set to Maintenance by staff are left alone. */

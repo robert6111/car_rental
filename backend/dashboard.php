@@ -6,8 +6,13 @@ require_once __DIR__ . '/includes/rental_status.php';
 
 sync_rental_and_car_status($conn);
 
-require_once __DIR__ . '/backup/auto_backup.php';
-run_daily_auto_backup($conn);
+// The scheduled task (cron/run.php) normally makes the daily backup. If it has not run for
+// a day and a half, the dashboard makes it instead so backups never stop.
+$scheduledTaskRunning = (int)cr_setting('scheduled_run_at') > time() - 36 * 3600;
+if (!$scheduledTaskRunning && cr_setting('auto_backup_on') !== cr_today()) {
+    require_once __DIR__ . '/backup/auto_backup.php';
+    run_daily_auto_backup($conn);
+}
 
 /** Runs a fixed SELECT COUNT(*) query (no user input) and returns the number. */
 function count_rows(mysqli $conn, string $sql): int {
@@ -319,6 +324,12 @@ $recentRentals = $conn->query("
                     <strong>Finish setting up your system.</strong> Check the business name, currency, timezone and phone code in
                     <a href="<?= h(app_url('settings/index.php')); ?>" style="color:#9a3412;text-decoration:underline;">Settings</a>.
                     This message disappears after you save them.
+                </div>
+            <?php endif; ?>
+            <?php if (stock_has_permission('settings_manage') && !$scheduledTaskRunning): ?>
+                <div style="background:#eff6ff;border:1px solid #93c5fd;color:#1e3a8a;padding:12px 16px;border-radius:10px;margin-bottom:16px;">
+                    <strong>The scheduled task is not set up.</strong> Daily backups currently run when someone opens this dashboard.
+                    Set up <code>cron/run-scheduled.bat</code> (Windows) or <code>cron/run.php</code> (Linux) to run every hour, as described in <code>backend/database/INSTALLATION_NOTES.txt</code>.
                 </div>
             <?php endif; ?>
 

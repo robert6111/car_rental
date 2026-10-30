@@ -208,6 +208,16 @@ $thousands = [',' => 'Comma ( 1,000 )', '.' => 'Dot ( 1.000 )', ' ' => 'Space ( 
             </div>
         </section>
 
+        <section class="settings-section">
+            <h3>Lists and backups</h3>
+            <?php $lastRun = (int)cr_setting('scheduled_run_at'); ?>
+            <p>Daily jobs (status updates, late interest, backup): <?php if ($lastRun > 0): ?>last run by the scheduled task on <strong><?= h(cr_date(date('Y-m-d', $lastRun)) . ' ' . date('H:i', $lastRun)); ?></strong>.<?php else: ?><strong>the scheduled task has not run yet</strong>. The system still works, but the daily backup then runs when someone opens the dashboard. See <code>backend/database/INSTALLATION_NOTES.txt</code> to set it up.<?php endif; ?></p>
+            <div class="settings-grid">
+                <div><label for="rows_per_page">Rows per page in lists</label><select id="rows_per_page" name="rows_per_page"><?php foreach (['25', '50', '100', '200'] as $n): ?><option value="<?= $n; ?>"<?= sv('rows_per_page') === $n ? ' selected' : ''; ?>><?= $n; ?></option><?php endforeach; ?></select><?= field_error('rows_per_page'); ?></div>
+                <div><label for="backup_keep_days">Keep automatic backups for (days)</label><input type="number" id="backup_keep_days" name="backup_keep_days" value="<?= h(sv('backup_keep_days')); ?>" min="1" max="3650" step="1"><span class="hint">Older automatic backups are deleted. Manual backups are kept.</span><?= field_error('backup_keep_days'); ?></div>
+            </div>
+        </section>
+
         <div class="settings-actions">
             <button type="submit" class="btn btn-primary">Save settings</button>
         </div>

@@ -7,3 +7,4 @@ backend/backup/backups/*.sql
 *.log
 !storage/.htaccess
 !storage/index.html
+.claude/

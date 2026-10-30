@@ -7,24 +7,36 @@ sync_rental_and_car_status($conn);
 $q = trim($_GET['q'] ?? '');
 $status_filter = trim($_GET['status'] ?? '');
 $where = 'WHERE 1';
+$types = '';
+$params = [];
 if ($q !== '') {
-    $safe = '%' . $conn->real_escape_string($q) . '%';
-    $where .= " AND (c.reg_no LIKE '$safe' OR m.name LIKE '$safe' OR mo.name LIKE '$safe')";
+    $like = '%' . $q . '%';
+    $where .= " AND (c.reg_no LIKE ? OR m.name LIKE ? OR mo.name LIKE ?)";
+    $types .= 'sss';
+    array_push($params, $like, $like, $like);
 }
 $car_statuses = ['Available', 'Reserved', 'Rented', 'Not Returned', 'Maintenance'];
 if (!in_array($status_filter, $car_statuses, true)) $status_filter = '';
 if ($status_filter !== '') {
-    $where .= " AND c.availability_status='" . $conn->real_escape_string($status_filter) . "'";
+    $where .= " AND c.availability_status=?";
+    $types .= 's';
+    $params[] = $status_filter;
 }
-$sql = "SELECT c.id, c.reg_no, c.vin, c.color, c.current_mileage, c.insurance_expiry, c.inspection_expiry, c.branch, c.price_per_day, c.availability_status, m.name AS make, mo.name AS model, y.year AS car_year
-        FROM cars c
+$from = "FROM cars c
         JOIN makes m ON c.make_id = m.id
         JOIN models mo ON c.model_id = mo.id
         JOIN car_years y ON c.year_id = y.id
-        $where
-        ORDER BY c.id DESC";
+        $where";
+$pg = cr_page();
+$pg = cr_page_count($conn, $pg, "SELECT COUNT(*) $from", $types, $params);
+$sql = "SELECT c.id, c.reg_no, c.vin, c.color, c.current_mileage, c.insurance_expiry, c.inspection_expiry, c.branch, c.price_per_day, c.availability_status, m.name AS make, mo.name AS model, y.year AS car_year
+        $from
+        ORDER BY c.id DESC" . cr_page_sql($pg);
 
-$result = $conn->query($sql);
+$stmt = $conn->prepare($sql);
+if ($types !== '') $stmt->bind_param($types, ...$params);
+$stmt->execute();
+$result = $stmt->get_result();
 $msg = '';
 if (isset($_GET['added'])) $msg = 'Car added successfully.';
 if (isset($_GET['updated'])) $msg = 'Car updated successfully.';
@@ -100,6 +112,7 @@ if (isset($deleteErrors[$errorCode])) $error = $deleteErrors[$errorCode];
     </tr>
     <?php endwhile; ?>
 </table>
+<?= cr_pagination($pg); ?>
     </div>
 </body>
 </html>

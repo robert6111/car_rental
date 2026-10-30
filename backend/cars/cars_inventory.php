@@ -70,6 +70,8 @@ if (isset($resultMessages[$resultCode])) {
     else $error = $resultMessages[$resultCode][1];
 }
 
+$pg = cr_page();
+$pg = cr_page_count($conn, $pg, "SELECT COUNT(*) FROM cars");
 $sql = "SELECT c.id, c.reg_no, c.availability_status,
                m.name AS make, mo.name AS model, y.year AS car_year,
                c.price_per_day
@@ -77,7 +79,7 @@ $sql = "SELECT c.id, c.reg_no, c.availability_status,
         LEFT JOIN makes m ON c.make_id = m.id
         LEFT JOIN models mo ON c.model_id = mo.id
         LEFT JOIN car_years y ON c.year_id = y.id
-        ORDER BY c.id DESC";
+        ORDER BY c.id DESC" . cr_page_sql($pg);
 
 $result = $conn->query($sql);
 if (!$result) {
@@ -128,7 +130,7 @@ include __DIR__ . '/../includes/leftsidebar.php';
         <?php if ($canManage): ?><th>Actions</th><?php endif; ?>
     </tr>
     <?php if ($result->num_rows > 0): ?>
-        <?php $count = 1; ?>
+        <?php $count = (int)$pg['offset'] + 1; ?>
         <?php while ($row = $result->fetch_assoc()): ?>
             <?php $status = (string)$row['availability_status']; ?>
             <tr>
@@ -167,6 +169,7 @@ include __DIR__ . '/../includes/leftsidebar.php';
         </tr>
     <?php endif; ?>
 </table>
+<?= cr_pagination($pg); ?>
 
 </div>
 

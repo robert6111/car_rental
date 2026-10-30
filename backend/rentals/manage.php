@@ -89,19 +89,21 @@ if ($status_filter !== '') {
     $params[] = $status_filter;
 }
 
-$sql = "SELECT r.id, r.start_date, r.end_date, r.total_cost, r.status AS rental_status, r.returned_at,
-               c.full_name AS customer_name, ca.reg_no AS car_reg, m.name AS make_name, mo.name AS model_name, y.year AS car_year,
-               " . cr_sql_total_paid('r') . " AS total_paid,
-               " . cr_sql_late_interest('r') . " AS late_interest,
-               " . cr_sql_late_days('r') . " AS late_days
-        FROM rentals r
+$from = "FROM rentals r
         JOIN customers c ON r.customer_id = c.id
         JOIN cars ca ON r.cars_id = ca.id
         LEFT JOIN makes m ON ca.make_id = m.id
         LEFT JOIN models mo ON ca.model_id = mo.id
         LEFT JOIN car_years y ON ca.year_id = y.id
-        $where
-        ORDER BY r.id DESC";
+        $where";
+$pg = cr_page_count($conn, cr_page(), "SELECT COUNT(*) $from", $types, $params);
+$sql = "SELECT r.id, r.start_date, r.end_date, r.total_cost, r.status AS rental_status, r.returned_at,
+               c.full_name AS customer_name, ca.reg_no AS car_reg, m.name AS make_name, mo.name AS model_name, y.year AS car_year,
+               " . cr_sql_total_paid('r') . " AS total_paid,
+               " . cr_sql_late_interest('r') . " AS late_interest,
+               " . cr_sql_late_days('r') . " AS late_days
+        $from
+        ORDER BY r.id DESC" . cr_page_sql($pg);
 $result = false;
 $stmt = $conn->prepare($sql);
 if ($stmt) {
@@ -123,7 +125,7 @@ $today = cr_today();
 <div class="content-page"><h2>Manage Rentals</h2><?php if ($msg): ?><p class="success-msg"><?= h($msg); ?></p><?php endif; ?><?php if ($error): ?><p class="error-msg"><?= h($error); ?></p><?php endif; ?><a href="add.php" class="btn btn-primary">Add New Rental</a>
 <form method="GET" class="filter-box"><div><label>Search by reg no / customer:</label><br><input type="text" name="q" value="<?= h($q); ?>" placeholder="Example: 34 ABC 123"></div><div><label>Status:</label><br><select name="status"><option value="">All</option><?php foreach($all_statuses as $s): ?><option value="<?= h($s) ?>" <?= $status_filter===$s?'selected':'' ?>><?= h($s) ?></option><?php endforeach; ?></select></div><div><button type="submit" class="btn btn-primary">Search</button><a href="manage.php" class="btn btn-danger">Clear</a></div></form>
 <div class="table-responsive"><table><thead><tr><th>#</th><th>Customer</th><th>Car</th><th>Registration No</th><th>Start</th><th>End</th><th>Cost</th><th>Paid</th><th>Balance</th><th>Status / Action Needed</th><th>Actions</th></tr></thead><tbody>
-<?php if($result && $result->num_rows > 0): $count=1; ?><?php while($row = $result->fetch_assoc()): ?>
+<?php if($result && $result->num_rows > 0): $count=$pg['offset']+1; ?><?php while($row = $result->fetch_assoc()): ?>
 <?php
     $status = $row['rental_status'];
     $statusColor = match($status) {'Active'=>'green','Completed'=>'blue','Deleted'=>'darkred','Canceled'=>'red','Pending'=>'orange',default=>'black'};
@@ -145,5 +147,5 @@ $today = cr_today();
 <?php if($status !== 'Deleted'): ?><a href="<?= h(stock_action_url('manage.php?action=del&rental_id=' . (int)$row['id'])); ?>" onclick="return confirm('Mark this rental as deleted?')" class="btn btn-danger btn-sm">Delete</a><?php endif; ?>
 <?php if($isOut): ?><form method="POST" action="manage.php" class="return-form" onsubmit="return confirm('Confirm that the car of rental #<?= (int)$row['id'] ?> has been returned?')"><input type="hidden" name="rental_id" value="<?= (int)$row['id'] ?>"><input type="text" inputmode="numeric" name="return_mileage" placeholder="Mileage"><input type="text" name="return_notes" placeholder="Notes" maxlength="1000"><button type="submit" name="confirm_return" value="1">Confirm return</button></form><?php endif; ?>
 </td></tr>
-<?php endwhile; ?><?php else: ?><tr><td colspan="11" class="text-center">No rentals found.</td></tr><?php endif; ?></tbody></table></div></div>
+<?php endwhile; ?><?php else: ?><tr><td colspan="11" class="text-center">No rentals found.</td></tr><?php endif; ?></tbody></table></div><?= cr_pagination($pg); ?></div>
 <?php if($result) $result->free(); $conn->close(); ?></body>

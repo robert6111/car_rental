@@ -48,9 +48,14 @@ function cr_settings_definitions(): array {
 
         // System
         'app_url'          => ['default' => '', 'type' => 'url', 'max' => 255],
+        'rows_per_page'    => ['default' => '25', 'type' => 'choice', 'choices' => ['25', '50', '100', '200']],
+        'backup_keep_days' => ['default' => '30', 'type' => 'int', 'min' => 1, 'max' => 3650],
         'settings_reviewed' => ['default' => '0', 'type' => 'internal'],
         'schema_version'   => ['default' => '0', 'type' => 'internal'],
         'interest_accrued_on' => ['default' => '', 'type' => 'internal'],
+        'status_synced_at' => ['default' => '0', 'type' => 'internal'],
+        'scheduled_run_at' => ['default' => '0', 'type' => 'internal'],
+        'auto_backup_on'   => ['default' => '', 'type' => 'internal'],
     ];
 }
 

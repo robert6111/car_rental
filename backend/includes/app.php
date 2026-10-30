@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/security.php';
 require_once __DIR__ . '/settings.php';
+require_once __DIR__ . '/pagination.php';
 
 function app_base_url(): string {
     $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');

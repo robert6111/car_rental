@@ -51,7 +51,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'del' && isset($_GET['customer
 }
 
 // Fetch all customers with completed rental count for loyalty discount visibility
-$result = $conn->query("SELECT c.*, COUNT(r.id) AS completed_rentals FROM customers c LEFT JOIN rentals r ON r.customer_id=c.id AND r.status='Completed' GROUP BY c.id ORDER BY c.id DESC");
+// Completed rentals are counted only for the customers shown on this page.
+$pg = cr_page_count($conn, cr_page(), "SELECT COUNT(*) FROM customers");
+$result = $conn->query("SELECT c.*, (SELECT COUNT(*) FROM rentals r WHERE r.customer_id=c.id AND r.status='Completed') AS completed_rentals FROM customers c ORDER BY c.id DESC" . cr_page_sql($pg));
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -93,7 +95,7 @@ $result = $conn->query("SELECT c.*, COUNT(r.id) AS completed_rentals FROM custom
                 </thead>
                 <tbody>
                 <?php if ($result->num_rows > 0): ?>
-                    <?php $count = 1; ?>
+                    <?php $count = $pg['offset'] + 1; ?>
                     <?php while ($row = $result->fetch_assoc()): ?>
                         <tr>
                             <td><?= $count++ ?></td>
@@ -119,6 +121,7 @@ $result = $conn->query("SELECT c.*, COUNT(r.id) AS completed_rentals FROM custom
                 <?php endif; ?>
                 </tbody>
             </table>
+            <?= cr_pagination($pg); ?>
         </div>
     </div>
 </div>

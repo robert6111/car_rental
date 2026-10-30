@@ -68,3 +68,13 @@ img, video { max-width: 100%; height: auto; }
     .card-box { padding: 15px; }
     input, select, textarea { max-width: 100%; }
 }
+
+/* Pagination (includes/pagination.php) */
+.cr-pager{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:14px 0;font-size:14px;color:#475569}
+.cr-pager-links{display:flex;flex-wrap:wrap;gap:4px}
+.cr-pager-links a,.cr-pager-links span{display:inline-block;min-width:34px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;text-align:center;text-decoration:none;color:#0f172a;background:#fff}
+.cr-pager-links a:hover{background:#f1f5f9}
+.cr-pager-links .current{background:#0f172a;border-color:#0f172a;color:#fff;font-weight:600}
+.cr-pager-links .disabled{color:#94a3b8;background:#f8fafc}
+.cr-pager-links .gap{border:0;background:none;min-width:auto}
+.cr-pager-size a{margin:0 2px}
